@@ -37,7 +37,7 @@ const ChatPage = () => {
   const navigate = useNavigate()
   const theme = useTheme()
   const [messages, setMessages] = useState([
-    { text: 'Merhaba! Size nasıl yardımcı olabilirim?', sender: 'ai' }
+    { text: 'Merhaba! Ben Gemini AI\'yım. Size nasıl yardımcı olabilirim?', sender: 'ai' }
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -59,17 +59,20 @@ const ChatPage = () => {
     setInput('')
     setLoading(true)
 
-    console.log('Sending message to AI:', input)
+    console.log('Sending message to Gemini AI:', input)
 
     try {
-      const res = await chat.sendMessage([{ text: userMessage.text }]);
-      const reply = res.data.reply || res.data.result || '...'
+      const res = await chat.sendMessage([{ text: input }]);
+      const reply = res.data.reply || res.data.result || 'Üzgünüm, yanıt alınamadı.'
       const aiMessage = { text: reply, sender: 'ai' }
 
       setMessages(prevMessages => [...prevMessages, aiMessage])
     } catch (err) {
-      console.error('Error sending message:', err)
-      setMessages(prevMessages => [...prevMessages, { text: 'Üzgünüm, mesaj gönderilirken bir hata oluştu.', sender: 'ai' }])
+      console.error('Error sending message to Gemini:', err)
+      setMessages(prevMessages => [...prevMessages, { 
+        text: 'Üzgünüm, Gemini AI\'dan yanıt alırken bir hata oluştu. Lütfen tekrar deneyin.', 
+        sender: 'ai' 
+      }])
     } finally {
       setLoading(false)
     }
@@ -89,7 +92,7 @@ const ChatPage = () => {
   const handleModeChange = (newMode) => {
     setMode(newMode)
     if (newMode === 'new') {
-      setMessages([{ text: 'Merhaba! Size nasıl yardımcı olabilirim?', sender: 'ai' }])
+      setMessages([{ text: 'Merhaba! Ben Gemini AI\'yım. Size nasıl yardımcı olabilirim?', sender: 'ai' }])
       setSelectedOldChat(null)
     } else if (newMode === 'history'){
       console.log('Loading chat history...')
@@ -197,7 +200,7 @@ const ChatPage = () => {
                         <BotIcon />
                       </Avatar>
                       <CircularProgress size={20} sx={{ mr: 1 }} />
-                      <Typography variant="body1">Yapay zeka yanıtlıyor...</Typography>
+                      <Typography variant="body1">Gemini AI yanıtlıyor...</Typography>
                     </Box>
                   </ListItem>
                 )}

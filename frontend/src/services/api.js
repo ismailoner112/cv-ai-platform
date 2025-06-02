@@ -244,12 +244,63 @@ export const endpoints = {
 
   // Chat endpoints
   chat: {
-    // Sohbet mesajı gönderme
-    sendMessage: (message) => api.post('/api/chat', { message }),
-    // Sohbet geçmişini getirme
-    getHistory: () => api.get('/api/chat/history'),
+    // Gemini API ile sohbet mesajı gönderme
+    sendMessage: async (messages) => {
+      try {
+        // Environment variable'dan API key'i al, yoksa hardcoded kullan
+        const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY || "AIzaSyD2vsbO55zUlo0LRyJdqmcRVXTBjkAEXQ4";
+        const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent";
+        
+        // Gemini API formatına uygun mesaj dönüştürme
+        const prompt = Array.isArray(messages) && messages.length > 0 
+          ? messages[messages.length - 1].text 
+          : (typeof messages === 'string' ? messages : '');
+
+        console.log('Sending to Gemini:', prompt);
+
+        const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: prompt
+              }]
+            }]
+          })
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Gemini API Error Response:', errorText);
+          throw new Error(`Gemini API Error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('Gemini API Response:', data);
+        
+        // Gemini API yanıtını işle
+        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Üzgünüm, yanıt alınamadı.';
+        
+        return {
+          data: {
+            reply: reply,
+            result: reply
+          }
+        };
+      } catch (error) {
+        console.error('Gemini API Error:', error);
+        throw error;
+      }
+    },
+    
+    // Sohbet geçmişini getirme (şimdilik boş - gerekirse localStorage kullanılabilir)
+    getHistory: () => Promise.resolve({ data: [] }),
+    
     // Yeni sohbet başlatma
-    startNewChat: () => api.post('/api/chat/new'),
+    startNewChat: () => Promise.resolve({ data: { success: true } }),
   },
 
   // Announcements endpoints
