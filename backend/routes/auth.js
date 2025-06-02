@@ -124,6 +124,7 @@ router.post('/login', async (req, res) => {
              // Admin kullanıcının rolünü tekrar kontrol et (manuel değişikliklere karşı)
             if (adminUser.role !== 'admin') adminUser.role = 'admin';
             adminUser.lastLogin = new Date();
+            adminUser.isOnline = true;
             await adminUser.save();
             const token = adminUser.generateAuthToken();
               res.cookie('token', token, {
@@ -154,6 +155,7 @@ router.post('/login', async (req, res) => {
     if (!user.role) user.role = 'user';
    
     user.lastLogin = new Date();
+    user.isOnline = true;
     await user.save();
     const token = user.generateAuthToken();
               res.cookie('token', token, {
@@ -197,16 +199,24 @@ router.post('/refresh', auth, (req, res) => {
 // 5) Çıkış
 // POST /api/auth/logout
 // —————————————
-router.post('/logout', auth, (_req, res) => {
-  // Cookie'yi temizle
-  res.clearCookie('token', {
-    httpOnly: true,
-    secure: false,
-    sameSite: 'Lax',
-    path: '/'
-  });
-  
-  res.json({ success: true, message: 'Çıkış yapıldı.' });
+router.post('/logout', auth, async (req, res) => {
+  try {
+    // Kullanıcıyı offline yap
+    await User.findByIdAndUpdate(req.user._id, { isOnline: false });
+    
+    // Cookie'yi temizle
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'Lax',
+      path: '/'
+    });
+    
+    res.json({ success: true, message: 'Çıkış yapıldı.' });
+  } catch (err) {
+    console.error('Logout error:', err);
+    res.status(500).json({ success: false, message: 'Çıkış hatası.' });
+  }
 });
 
 module.exports = router;

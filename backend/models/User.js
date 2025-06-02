@@ -21,6 +21,7 @@ const userSchema = new mongoose.Schema({
     default: 'user'
   },
   isActive: { type: Boolean, default: true },
+  isOnline: { type: Boolean, default: false },
   lastLogin: { type: Date, default: null },
 
   // Gemini API Key alanı eklendi

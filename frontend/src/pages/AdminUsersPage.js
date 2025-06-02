@@ -25,6 +25,7 @@ import {
   InputAdornment,
   Chip,
   FormControl,
+  Tooltip,
 } from '@mui/material'
 import { Link } from 'react-router-dom'
 import { users } from '../services/api'
@@ -36,6 +37,8 @@ import {
   AdminPanelSettings as AdminIcon,
   CheckCircleOutline as VerifiedIcon,
   ErrorOutline as UnverifiedIcon,
+  RadioButtonChecked as OnlineIcon,
+  RadioButtonUnchecked as OfflineIcon,
 } from '@mui/icons-material'
 
 export default function AdminUsersPage() {
@@ -97,6 +100,22 @@ export default function AdminUsersPage() {
     }
   }
 
+  // Kullanıcı durumunu değiştir (aktif/pasif)
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+      const response = await users.update(id, { isOnline: newStatus })
+      if (response.data.success) {
+        setUsersList(u => u.map(user => user._id === id ? { ...user, isOnline: newStatus } : user))
+        showNotification(`Kullanıcı ${newStatus ? 'aktif' : 'pasif'} yapıldı`, 'success')
+      } else {
+        showNotification(response.data.message || 'Durum değiştirme başarısız oldu.', 'error')
+      }
+    } catch (err) {
+      console.error(err)
+      showNotification('Durum değiştirme sırasında hata oluştu.', 'error')
+    }
+  }
+
   // 3) Kullanıcı sil
   const handleDeleteClick = (user) => {
     setUserToDelete(user)
@@ -119,6 +138,25 @@ export default function AdminUsersPage() {
     } finally {
       setDeleteDialogOpen(false)
       setUserToDelete(null)
+    }
+  }
+
+  // Kullanıcının aktif durumunu kontrol et
+  const getUserStatus = (user) => {
+    if (user.isOnline) {
+      return { status: 'online', label: 'Aktif', color: 'success' }
+    } else if (user.lastLogin) {
+      const lastLoginDate = new Date(user.lastLogin)
+      const now = new Date()
+      const diffInHours = (now - lastLoginDate) / (1000 * 60 * 60)
+      
+      if (diffInHours < 24) {
+        return { status: 'recent', label: 'Son 24 saatte aktif', color: 'warning' }
+      } else {
+        return { status: 'offline', label: 'Pasif', color: 'default' }
+      }
+    } else {
+      return { status: 'never', label: 'Hiç giriş yapmadı', color: 'error' }
     }
   }
 
@@ -204,7 +242,7 @@ export default function AdminUsersPage() {
                 <TableRow>
                   <TableCell>E‑posta</TableCell>
                   <TableCell>Adı Soyadı</TableCell>
-                   <TableCell>Durum</TableCell>
+                   <TableCell>Durum (Giriş)</TableCell>
                   <TableCell>Rol</TableCell>
                   <TableCell align="right">İşlemler</TableCell>
                 </TableRow>
@@ -225,12 +263,22 @@ export default function AdminUsersPage() {
                        <Typography variant="body2">{`${user.name || '-'} ${user.surname || '-'}`}</Typography>
                     </TableCell>
                      <TableCell>
-                       <Chip
-                         icon={user.isVerified ? <VerifiedIcon /> : <UnverifiedIcon />}
-                         label={user.isVerified ? 'Doğrulandı' : 'Doğrulanmadı'}
-                         color={user.isVerified ? 'success' : 'warning'}
-                         size="small"
-                       />
+                       {(() => {
+                         const userStatus = getUserStatus(user)
+                         return (
+                           <Tooltip title={userStatus.label}>
+                             <Chip
+                               icon={user.isOnline ? <OnlineIcon /> : <OfflineIcon />}
+                               label={userStatus.label}
+                               color={userStatus.color}
+                               size="small"
+                               variant={user.isOnline ? 'filled' : 'outlined'}
+                               onClick={() => handleStatusChange(user._id, !user.isOnline)}
+                               sx={{ cursor: 'pointer' }}
+                             />
+                           </Tooltip>
+                         )
+                       })()}
                     </TableCell>
                     <TableCell>
                       <FormControl variant="outlined" size="small">

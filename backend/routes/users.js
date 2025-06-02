@@ -117,7 +117,7 @@ router.post('/', auth, isAdmin, async (req, res) => {
 // Tüm kullanıcıları listele (Admin)
 router.get('/', auth, isAdmin, async (req, res) => {
   try {
-    const users = await User.find().select('_id email role name surname');
+    const users = await User.find().select('_id email role name surname isOnline lastLogin createdAt');
     res.json({ success: true, users });
   } catch (err) {
     console.error('Kullanıcıları listeleme hatası:', err);
@@ -169,12 +169,13 @@ router.put('/:id', auth, isAdmin, async (req, res) => {
         return res.status(400).json({ success: false, message: 'Geçersiz kullanıcı ID' });
     }
 
-    const { name, surname, email, role } = req.body; // Sadece bu alanlara izin ver
+    const { name, surname, email, role, isOnline } = req.body; // isOnline alanı eklendi
     const updateData = {};
     if (name !== undefined) updateData.name = name.trim();
     if (surname !== undefined) updateData.surname = surname.trim();
     if (email !== undefined) updateData.email = email.trim();
     if (role !== undefined) updateData.role = role.trim();
+    if (isOnline !== undefined) updateData.isOnline = Boolean(isOnline);
 
     if (Object.keys(updateData).length === 0) {
         return res.status(400).json({ success: false, message: 'Güncellenecek veri sağlanmadı.' });
