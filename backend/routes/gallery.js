@@ -60,6 +60,44 @@ router.post('/', auth, isAdmin, upload.single('file'), async (req, res) => {
     }
 });
 
+// Admin için şablon listesi (bu rota genel rotadan önce gelmelidir)
+router.get('/admin', auth, isAdmin, async (req, res) => {
+  try {
+    const { searchTerm, sortBy = 'createdAtDesc' } = req.query;
+
+    let filter = {};
+    if (searchTerm) {
+      filter.$or = [
+        { title: { $regex: searchTerm, $options: 'i' } },
+        { description: { $regex: searchTerm, $options: 'i' } },
+      ];
+    }
+
+    let sort = {};
+    switch (sortBy) {
+      case 'createdAtAsc':
+        sort.createdAt = 1;
+        break;
+      case 'titleAsc':
+        sort.title = 1;
+        break;
+      case 'titleDesc':
+        sort.title = -1;
+        break;
+      case 'createdAtDesc':
+      default:
+        sort.createdAt = -1;
+        break;
+    }
+
+    const items = await Gallery.find(filter).sort(sort).populate('author', 'name email');
+    res.json({ success: true, items });
+  } catch (err) {
+    console.error('Admin şablon listeleme hatası:', err);
+    res.status(500).json({ success: false, message: 'Şablonlar listelenirken hata oluştu.' });
+  }
+});
+
 // 2) Tüm şablonları listele (Public) - Arama ve sıralama eklendi
 router.get('/', async (req, res) => {
   try {

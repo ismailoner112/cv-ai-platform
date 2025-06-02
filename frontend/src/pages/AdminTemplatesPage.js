@@ -18,7 +18,7 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon
 } from '@mui/icons-material';
-import api from '../services/api';
+import api, { gallery } from '../services/api';
 
 export default function AdminTemplatesPage() {
   const navigate = useNavigate();
@@ -30,8 +30,8 @@ export default function AdminTemplatesPage() {
     setError('');
     setLoading(true);
     try {
-      const resp = await api.get('/gallery/admin');
-      setTemplates(resp.data.templates);
+      const resp = await gallery.admin();
+      setTemplates(resp.data.items || []);
     } catch (err) {
       console.error('Şablon yükleme hatası:', err);
       setError('Şablonlar yüklenirken bir hata oluştu.');
@@ -48,7 +48,7 @@ export default function AdminTemplatesPage() {
   const handleDelete = async id => {
     if (!window.confirm('Bu şablonu gerçekten silmek istiyor musunuz?')) return;
     try {
-      const res = await api.delete(`/gallery/admin/${id}`);
+      const res = await gallery.delete(id);
       if (res.data.success) {
         fetchTemplates();
       } else {

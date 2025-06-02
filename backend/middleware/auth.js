@@ -39,8 +39,8 @@ const verifyToken = async (token) => {
 // Auth middleware
 exports.auth = async (req, res, next) => {
   try {
-    // JWT token'ı al
-    const token = req.headers.authorization?.split(' ')[1];
+    // JWT token'ı çerezden al
+    const token = req.cookies.token;
     if (!token) throw new Error(ERROR_MESSAGES.NO_TOKEN);
 
     // Token'ı doğrula
@@ -56,7 +56,13 @@ exports.auth = async (req, res, next) => {
     // Eğer token'ın süresi 7 günden az kaldıysa yenile
     if (timeUntilExpiration < 7 * 24 * 60 * 60 * 1000) {
       const newToken = user.generateAuthToken();
-      res.set('X-New-Token', newToken);
+      // Yeni token'ı çerez olarak set et
+      res.cookie('token', newToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 gün
+      });
     }
 
     next();

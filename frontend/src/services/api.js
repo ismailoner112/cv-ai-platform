@@ -514,6 +514,11 @@ Yanıtını SADECE şu JSON formatında ver:
   // Announcements endpoints
   announcements: {
     getAll:       filters => api.get('/api/announcements', { params: filters }),
+    list:         (filters = {}) => api.get('/api/announcements', { params: { ...filters, all: 'true' } }),
+    create:       data => api.post('/api/announcements', data),
+    update:       (id, data) => api.put(`/api/announcements/${id}`, data),
+    delete:       id => api.delete(`/api/announcements/${id}`),
+    getOne:       id => api.get(`/api/announcements/${id}`),
     toggleFavorite: id => api.post(`/api/announcements/${id}/favorite`),
     scrape:       (source, keyword) => api.post('/api/jobs/scrape', { source, keyword }),
   },
@@ -530,6 +535,21 @@ Yanıtını SADECE şu JSON formatında ver:
       
         const url = `/api/gallery${queryString ? `?${queryString}` : ''}`; // Add query string if exists
 
+        const response = await api.get(url);
+        return response;
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    // Admin için şablon listesi
+    admin: async (params = {}) => {
+      try {
+        const queryString = Object.keys(params)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+          .join('&');
+      
+        const url = `/api/gallery/admin${queryString ? `?${queryString}` : ''}`;
         const response = await api.get(url);
         return response;
       } catch (error) {
