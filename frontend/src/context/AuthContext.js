@@ -11,6 +11,14 @@ export const useAuth = () => {
   return context;
 };
 
+// Çerezden token okuma fonksiyonu
+const getCookieValue = (name) => {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+  return null;
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -19,6 +27,16 @@ export const AuthProvider = ({ children }) => {
   // Kullanıcının oturum durumunu kontrol et
   const checkAuthStatus = useCallback(async () => {
     try {
+      // Önce çerezden token kontrolü yap
+      const token = getCookieValue('token');
+      
+      if (!token) {
+        setIsAuthenticated(false);
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
       const response = await endpoints.auth.verify(); // Backend verify endpointini çağır
       if (response.data.isAuthenticated) {
         setIsAuthenticated(true);
@@ -26,11 +44,15 @@ export const AuthProvider = ({ children }) => {
       } else {
         setIsAuthenticated(false);
         setUser(null);
+        // Token geçersizse çerezi temizle
+        document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
       }
     } catch (error) {
       console.error('Authentication check failed:', error);
       setIsAuthenticated(false);
       setUser(null);
+      // Hata durumunda da çerezi temizle
+      document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
     } finally {
       setLoading(false);
     }
@@ -66,11 +88,14 @@ export const AuthProvider = ({ children }) => {
   const logout = useCallback(async () => {
     try {
       await endpoints.auth.logout(); // Backend logout endpointini çağır
+      // Çerezi temizle
+      document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
       setIsAuthenticated(false);
       setUser(null);
     } catch (error) {
       console.error('Logout failed:', error);
-      // Hata olsa bile frontend state'ini temizle
+      // Hata olsa bile frontend state'ini ve çerezi temizle
+      document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
       setIsAuthenticated(false);
       setUser(null);
     }

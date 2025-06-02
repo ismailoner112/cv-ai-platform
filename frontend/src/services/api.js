@@ -4,6 +4,14 @@ import axios from 'axios';
 // API base URL
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
+// Çerezden token okuma fonksiyonu
+const getCookieValue = (name) => {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+  return null;
+};
+
 // Axios instance oluşturma
 const api = axios.create({
   baseURL: API_URL,
@@ -31,10 +39,8 @@ const processQueue = (error, token = null) => {
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
-    // Yeni token alındığında
-    if (response.headers['x-new-token']) {
-      localStorage.setItem('token', response.headers['x-new-token']);
-    }
+    // Yeni token alındığında (backend çerez olarak set eder)
+    // Frontend'de özel bir işlem yapmaya gerek yok
     
     // Yeni CSRF token alındığında
     if (response.headers['x-csrf-token']) {
@@ -105,23 +111,19 @@ api.interceptors.response.use(
 
         try {
           const response = await api.post('/api/auth/refresh');
-          const newToken = response.data.token;
-          localStorage.setItem('token', newToken);
+          // Token backend tarafından çerez olarak set edilir, frontend'de özel işlem gerekmez
+          
+          // Kuyruktaki tüm isteklere devam et
+          processQueue(null, null);
 
-          // Kuyruktaki tüm isteklere yeni token ile devam et
-          processQueue(null, newToken);
-
-          // Orijinal isteği yeni token ile tekrar dene
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          // Orijinal isteği tekrar dene (çerezden token otomatik alınacak)
           return api(originalRequest);
         } catch (refreshError) {
           // Token yenileme başarısız olursa kuyruktaki tüm istekleri reddet
           processQueue(refreshError, null);
-          // Kullanıcıyı çıkış yaptır
-          localStorage.removeItem('token');
+          // Çerezi temizle
+          document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
           localStorage.removeItem('csrfToken');
-          // Frontend yönlendirmesini burada yapma, hata catch bloğuna gitsin
-          // window.location.href = '/auth';
           return Promise.reject(refreshError);
         } finally {
           isRefreshing = false;
@@ -141,12 +143,9 @@ api.interceptors.response.use(
 // Request interceptor
 api.interceptors.request.use(
   async (config) => {
-    // JWT token ekleme
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
+    // JWT token çerezden otomatik olarak gönderilir (withCredentials: true sayesinde)
+    // Ek bir işlem gerekmez
+    
     // CSRF token ekleme
     const csrfToken = localStorage.getItem('csrfToken');
     if (csrfToken) {
@@ -167,9 +166,7 @@ export const endpoints = {
     login: async (credentials, config) => {
       try {
         const response = await api.post('/api/auth/login', credentials, config);
-        if (response.data.token) {
-          localStorage.setItem('token', response.data.token);
-        }
+        // Token backend tarafından çerez olarak set edilir
         if (response.data.csrfToken) {
           localStorage.setItem('csrfToken', response.data.csrfToken);
         }
@@ -182,9 +179,7 @@ export const endpoints = {
     register: async (userData) => {
       try {
         const response = await api.post('/api/auth/register', userData);
-        if (response.data.token) {
-          localStorage.setItem('token', response.data.token);
-        }
+        // Token backend tarafından çerez olarak set edilir
         if (response.data.csrfToken) {
           localStorage.setItem('csrfToken', response.data.csrfToken);
         }
@@ -197,7 +192,7 @@ export const endpoints = {
     logout: async () => {
       try {
         const response = await api.post('/api/auth/logout');
-        localStorage.removeItem('token');
+        // Backend çerezi temizler
         localStorage.removeItem('csrfToken');
         return response;
       } catch (error) {
@@ -207,11 +202,7 @@ export const endpoints = {
 
     verify: async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          return { data: { isAuthenticated: false } };
-        }
-
+        // Çerezden token otomatik olarak gönderilir, frontend kontrolüne gerek yok
         const response = await api.get('/api/auth/verify');
         return {
           data: {
@@ -221,7 +212,7 @@ export const endpoints = {
         };
       } catch (error) {
         console.error('Auth verification error:', error);
-        localStorage.removeItem('token');
+        // Sadece CSRF token'ı temizle
         localStorage.removeItem('csrfToken');
         return { data: { isAuthenticated: false } };
       }

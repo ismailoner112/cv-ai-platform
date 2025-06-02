@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '../services/api';
+import { endpoints } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import {
   Container,
@@ -28,6 +29,7 @@ const AdminAuthPage = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const { showNotification } = useNotification();
+  const { login } = useAuth();
   
   // State management
   const [loading, setLoading] = useState(false);
@@ -47,7 +49,7 @@ const AdminAuthPage = () => {
     // Fetch CSRF token when component mounts
     const fetchCsrfToken = async () => {
       try {
-        const response = await auth.getCsrfToken();
+        const response = await endpoints.auth.getCsrfToken();
         setCsrfToken(response.data.csrfToken);
         console.log('CSRF Token fetched:', response.data.csrfToken);
       } catch (error) {
@@ -95,25 +97,17 @@ const AdminAuthPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!validateForm() || !csrfToken) { // Ensure form is valid and CSRF token is available
-       if (!csrfToken) {
-          showNotification('CSRF token hala yüklenmedi. Lütfen bekleyin veya sayfayı yenileyin.', 'error');
-       }
-       return; // Stop if form is invalid or token is missing
-    }
+    if (!validateForm()) return;
     
     setLoading(true);
     try {
-      // Pass CSRF token in headers for the login request
-      const response = await auth.login({
-        email: formData.email,
-        password: formData.password
-      }, { headers: { 'X-CSRF-Token': csrfToken } }); // Include CSRF token in headers
+      // AuthContext'teki login fonksiyonunu kullan
+      const result = await login(formData.email, formData.password);
       
       // Backend başarılı yanıt döndürürse (rol admin olsa da olmasa da)
-      if (response.data.success) {
+      if (result.success) {
           // Frontend sadece backend'in verdiği role göre yönlendirme yapacak
-          if (response.data.user?.role === 'admin') {
+          if (result.user?.role === 'admin') {
                showNotification('Admin Girişi başarılı', 'success');
                navigate('/stats'); // Adminler için varsayılan yönlendirme
           } else {
@@ -121,12 +115,11 @@ const AdminAuthPage = () => {
                showNotification('Kullanıcı Girişi başarılı', 'success');
                navigate('/dashboard'); // Kullanıcılar için varsayılan yönlendirme
           }
-
-      } /* Backend hata döndürürse catch bloğu çalışır */
+      } else {
+        showNotification(result.message || 'Giriş başarısız', 'error');
+      }
     } catch (error) {
       console.error('Auth error:', error);
-      // The interceptor will handle 403 CSRF errors and retry
-      // Other errors (like 401 invalid credentials) will be caught here.
       showNotification(
         error.response?.data?.message || 'Bir hata oluştu',
         'error'

@@ -1,7 +1,8 @@
 // src/pages/AuthPage.js
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '../services/api';
+import { endpoints } from '../services/api'; // API servisini sadece register için kullan
+import { useAuth } from '../context/AuthContext'; // AuthContext'i ekle
 import { useNotification } from '../context/NotificationContext';
 import {
   Container,
@@ -32,6 +33,7 @@ const AuthPage = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const { showNotification } = useNotification();
+  const { login } = useAuth(); // AuthContext'ten login fonksiyonunu al
   
   // State management
   // 0: Kullanıcı Girişi, 1: Kullanıcı Kayıt
@@ -121,17 +123,16 @@ const AuthPage = () => {
     setLoading(true);
     try {
       if (activeTab === 0) { // Kullanıcı Girişi
-        const response = await auth.login({
-          email: formData.email,
-          password: formData.password
-        });
+        const result = await login(formData.email, formData.password);
         
-        if (response.data.success) {
+        if (result.success) {
           showNotification('Kullanıcı Girişi başarılı', 'success');
           navigate('/dashboard'); // Kullanıcılar için varsayılan yönlendirme
+        } else {
+          showNotification(result.message || 'Giriş başarısız', 'error');
         }
       } else if (activeTab === 1) { // Kullanıcı Kayıt
-         const response = await auth.register({
+         const response = await endpoints.auth.register({
            name: formData.name,
            surname: formData.surname,
            email: formData.email,
@@ -140,7 +141,11 @@ const AuthPage = () => {
          
          if (response.data.success) {
            showNotification('Kayıt başarılı', 'success');
-           navigate('/dashboard'); // Kayıt sonrası varsayılan yönlendirme
+           // Kayıt sonrası otomatik login yap
+           const loginResult = await login(formData.email, formData.password);
+           if (loginResult.success) {
+             navigate('/dashboard');
+           }
          }
       
       } /* Admin Girişi kısmı kaldırıldı */

@@ -10,6 +10,8 @@ const bcrypt = require('bcryptjs'); // Import bcrypt
 // Admin kimlik bilgileri (backend'de kontrol edilecek)
 const ADMIN_EMAIL = 'adminuser@gmail.com';
 const ADMIN_PASSWORD = 'adminuser'; // Düz metin şifre (GEÇİCİ VE GÜVENLİ DEĞİLDİR!)
+const USER_EMAIL = 'testuser@gmail.com';
+const USER_PASSWORD = 'testuser';
 
 // —————————————
 // 0) CSRF Token
@@ -150,11 +152,16 @@ router.post('/login', async (req, res) => {
 
     // Kullanıcının rolünü 'user' olarak ayarla eğer ayarlanmamışsa
     if (!user.role) user.role = 'user';
-    
+   
     user.lastLogin = new Date();
     await user.save();
     const token = user.generateAuthToken();
-    
+              res.cookie('token', token, {
+            httpOnly: true,
+            secure: false,       // prod’da HTTPS kullanıyorsanız true yapın
+            sameSite: 'Lax',     // cross-site durumları için 'None' veya 'Strict' / 'Lax' ayarlayın
+            maxAge: 60 * 60 * 1000  // 1 saat (ms cinsinden)
+          });
     res.json({ 
       success: true, 
       token, 

@@ -1,7 +1,7 @@
 // src/components/Layout.js
 import React, { useState, useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
-import { AppBar, Toolbar, IconButton, Typography, Box, Badge } from '@mui/material'
+import { AppBar, Toolbar, IconButton, Typography, Box, Badge, Menu, MenuItem } from '@mui/material'
 import Sidebar from './Sidebar'
 import { io } from 'socket.io-client'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -25,6 +25,8 @@ import {
   Analytics as AnalyticsIcon,
   AdminPanelSettings as AdminIcon,
   Person as PersonIcon,
+  AccountCircle as AccountCircleIcon,
+  Logout as LogoutIcon,
 } from '@mui/icons-material'
 import { useAuth } from '../context/AuthContext'
 
@@ -48,7 +50,8 @@ const adminMenuItems = [
 export default function Layout() {
   const [onlineCount, setOnlineCount] = useState(0)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const { user } = useAuth()
+  const [anchorEl, setAnchorEl] = useState(null)
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const theme = useTheme()
@@ -73,6 +76,27 @@ export default function Layout() {
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
+  }
+
+  const handleProfileMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget)
+  }
+
+  const handleProfileMenuClose = () => {
+    setAnchorEl(null)
+  }
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      navigate('/auth')
+      handleProfileMenuClose()
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Logout başarısız olsa bile auth sayfasına yönlendir
+      navigate('/auth')
+      handleProfileMenuClose()
+    }
   }
 
   const drawer = (
@@ -160,8 +184,63 @@ export default function Layout() {
              adminMenuItems.find(item => item.path === location.pathname)?.text || 
              'CV AI'}
           </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              {user?.name} {user?.surname}
+            </Typography>
+            <IconButton
+              color="inherit"
+              onClick={handleProfileMenuOpen}
+              sx={{ p: 0 }}
+            >
+              <AccountCircleIcon />
+            </IconButton>
+          </Box>
         </Toolbar>
       </AppBar>
+
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleProfileMenuClose}
+        onClick={handleProfileMenuClose}
+        PaperProps={{
+          elevation: 0,
+          sx: {
+            overflow: 'visible',
+            filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
+            mt: 1.5,
+            '& .MuiAvatar-root': {
+              width: 32,
+              height: 32,
+              ml: -0.5,
+              mr: 1,
+            },
+            '&:before': {
+              content: '""',
+              display: 'block',
+              position: 'absolute',
+              top: 0,
+              right: 14,
+              width: 10,
+              height: 10,
+              bgcolor: 'background.paper',
+              transform: 'translateY(-50%) rotate(45deg)',
+              zIndex: 0,
+            },
+          },
+        }}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+      >
+        <MenuItem onClick={handleLogout}>
+          <ListItemIcon>
+            <LogoutIcon fontSize="small" />
+          </ListItemIcon>
+          Çıkış Yap
+        </MenuItem>
+      </Menu>
+
       <Box
         component="nav"
         sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
