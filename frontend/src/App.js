@@ -1,0 +1,96 @@
+import React from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { ThemeProvider } from '@mui/material/styles'
+import CssBaseline from '@mui/material/CssBaseline'
+// import { Box, Typography } from '@mui/material'; // Not needed in App.js anymore
+import { AuthProvider } from './context/AuthContext'
+
+import theme from './theme'
+import { NotificationProvider } from './context/NotificationContext'
+import PrivateRoute from './components/PrivateRoute'
+import Layout from './components/Layout'
+import './App.css'
+
+// PUBLIC
+import AuthPage from './pages/AuthPage'
+import HomePage from './pages/HomePage'
+import AdminAuthPage from './pages/AdminAuthPage'; // Import AdminAuthPage
+
+// PROTECTED
+import AnalysisPage from './pages/AnalysisPage'
+import ChatPage from './pages/ChatPage'; // Import the new ChatPage component
+import AnnouncementsPage from './pages/AnnouncementsPage'; // Import the AnnouncementsPage component
+import GalleryPages from './pages/GalleryPages'; // Import the GalleryPages component
+import VisitorsPage from './pages/VisitorsPage'; // Import the VisitorsPage component
+// Import admin pages
+import AdminAnnouncementsPage from './pages/AdminAnnouncementsPage';
+import AdminAnnouncementsCreatePage from './pages/AdminAnnouncementsCreatePage';
+import AdminAnnouncementsEditPage from './pages/AdminAnnouncementsEditPage';
+import AdminUsersPage from './pages/AdminUsersPage';
+import AdminTemplatesPage from './pages/AdminTemplatesPage';
+import AdminTemplateCreatePage from './pages/AdminTemplateCreatePage';
+import AdminTemplateEditPage from './pages/AdminTemplateEditPage';
+
+// Placeholder for the Chat Page (No longer needed, but keeping comment for clarity)
+// const ChatPlaceholder = () => (
+//   <Box sx={{ p: 3, textAlign: 'center' }}>
+//     <Typography variant="h4">Sohbet Sayfası</Typography>
+//     <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
+//       Bu sayfa henüz yapım aşamasındadır.
+//     </Typography>
+//   </Box>
+// );
+
+function App() {
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <NotificationProvider>
+        <AuthProvider>
+          <Router>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/auth" element={<AuthPage />} />
+
+              {/* Protected Routes with Layout */}
+              <Route element={<Layout />}>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/analysis" element={<AnalysisPage />} />
+                <Route path="/announcements" element={<AnnouncementsPage />} />
+                <Route path="/chat" element={<ChatPage />} />
+                <Route path="/gallery" element={<GalleryPages />} />
+
+                {/* Admin Routes */}
+                <Route path="/admin/announcements" element={
+                  <PrivateRoute role="admin">
+                    <AdminAnnouncementsPage />
+                  </PrivateRoute>
+                } />
+                <Route path="/admin/users" element={
+                  <PrivateRoute role="admin">
+                    <AdminUsersPage />
+                  </PrivateRoute>
+                } />
+                <Route path="/admin/templates" element={
+                  <PrivateRoute role="admin">
+                    <AdminTemplatesPage />
+                  </PrivateRoute>
+                } />
+                <Route path="/stats" element={
+                  <PrivateRoute role="admin">
+                    <VisitorsPage />
+                  </PrivateRoute>
+                } />
+              </Route>
+
+              {/* Catch all route */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Router>
+        </AuthProvider>
+      </NotificationProvider>
+    </ThemeProvider>
+  )
+}
+
+export default App

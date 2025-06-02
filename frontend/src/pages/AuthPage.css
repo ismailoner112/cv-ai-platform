@@ -1,0 +1,167 @@
+/* Tam sayfayı kaplayan arka plan */
+.auth-container {
+  display: flex;
+  height: 100vh;
+  background: url('../assets/login-bg.jpg') center/cover no-repeat;
+}
+
+/* SOL PANEL: Tam şeffaf, üstte başlayacak içerik */
+.auth-info {
+  flex: 1;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 4rem 2rem 2rem;
+  text-align: center;
+}
+.auth-info h2 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+.auth-info p {
+  font-size: 1rem;
+  line-height: 1.5;
+  max-width: 400px;
+}
+
+/* SAĞ PANEL: Form alanları */
+.auth-form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 2rem;
+  background: transparent;
+}
+
+/* Tab butonları */
+.tabs {
+  display: flex;
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 1.5rem;
+}
+.tabs button {
+  flex: 1;
+  padding: 0.75rem 0;
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-size: 1.125rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.tabs button.active {
+  border-bottom: 3px solid #D6FF00;
+  color: #D6FF00;
+}
+
+/* Ortak form stilleri */
+.form-group {
+  width: 100%;
+  margin-bottom: 1.5rem;
+}
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #333;
+  font-weight: 500;
+}
+.form-group input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+.form-group input:focus {
+  border-color: #111059;
+  outline: none;
+}
+
+/* Gönder butonu */
+button[type="submit"] {
+  width: 100%;
+  padding: 1rem;
+  background: #111059;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+button[type="submit"]:hover {
+  background: #0d0d3f;
+}
+button[type="submit"]:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* Hata mesajı */
+.error-message {
+  background: #ffebee;
+  color: #c62828;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .auth-container {
+    flex-direction: column;
+  }
+
+  .auth-info {
+    padding: 1rem;
+  }
+
+  .auth-form {
+    padding: 1rem;
+  }
+}
+
+.MuiPaper-root {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px);
+}
+
+.MuiTabs-root {
+  margin-bottom: 2rem;
+}
+
+.MuiTab-root {
+  font-size: 1.1rem !important;
+  text-transform: none !important;
+}
+
+.MuiTextField-root {
+  margin-bottom: 1rem !important;
+}
+
+.MuiButton-root {
+  margin-top: 2rem !important;
+  padding: 0.8rem !important;
+  font-size: 1.1rem !important;
+  text-transform: none !important;
+}
+
+.MuiCircularProgress-root {
+  color: white !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .MuiContainer-root {
+    padding: 1rem !important;
+  }
+  
+  .MuiPaper-root {
+    padding: 1.5rem !important;
+  }
+}

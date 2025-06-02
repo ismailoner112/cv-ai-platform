@@ -1,0 +1,75 @@
+/* src/pages/HomePage.css */
+.home-container {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  background-image: url('../assets/background.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+.home-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.7) 0%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
+  backdrop-filter: blur(5px);
+}
+
+.home-title {
+  font-size: 4rem;
+  text-shadow: 0 0 10px rgba(0,0,0,0.7);
+}
+
+.home-subtitle {
+  font-size: 1.25rem;
+  margin-top: 1rem;
+}
+
+.home-button {
+  margin-top: 2rem;
+  padding: 0.75rem 2rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #06005A;
+  background: #D6FF00;
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.home-button:hover {
+  background: #c0e600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .MuiContainer-root {
+    padding: 1rem !important;
+  }
+  
+  .MuiPaper-root {
+    padding: 2rem !important;
+  }
+  
+  .MuiTypography-h2 {
+    font-size: 2rem !important;
+  }
+  
+  .MuiTypography-h5 {
+    font-size: 1.1rem !important;
+  }
+  
+  .MuiButton-root {
+    width: 100% !important;
+  }
+}

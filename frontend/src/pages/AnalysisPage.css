@@ -1,0 +1,222 @@
+.analysis-page {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  
+}
+
+/* üstteki sabit bar */
+.top-bar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 56px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  z-index: 10;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+/* drawer içeriği */
+.analysis-sidebar .MuiDrawer-paper {
+  width: 20%;
+  min-width: 200px;
+  top: 56px;   /* üst bar'ın hemen altından başlasın */
+  height: calc(100% - 56px);
+  box-sizing: border-box;
+  z-index: -1;
+}
+
+/* ana içerik bölgesi */
+.analysis-main {
+  margin-top: 56px; /* üst bar kadar boşluk */
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+/* yeni analiz formu */
+.analysis-form {
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+/* geçmiş analiz detayı */
+.analysis-result {
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.analysis-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.analysis-form {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.analysis-form h2 {
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #666;
+}
+
+.form-group input[type="file"] {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+button {
+  background: #1976d2;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.3s ease;
+}
+
+button:hover {
+  background: #1565c0;
+}
+
+button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.analysis-history {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.analysis-history h3 {
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.history-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filename {
+  font-weight: 500;
+  color: #333;
+}
+
+.date {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.history-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.history-actions button {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+}
+
+.history-actions button.delete {
+  background: #dc3545;
+}
+
+.history-actions button.delete:hover {
+  background: #c82333;
+}
+
+.analysis-details {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-top: 2rem;
+}
+
+.analysis-details h3 {
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.details-content {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  overflow-x: auto;
+}
+
+.details-content pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+@media (max-width: 768px) {
+  .analysis-container {
+    padding: 1rem;
+  }
+
+  .analysis-form,
+  .analysis-history,
+  .analysis-details {
+    padding: 1rem;
+  }
+
+  .history-item {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .history-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+.analysis-error-alert .MuiAlert-icon {
+  color: red !important;
+}
+
+.analysis-error-alert .MuiAlert-message {
+  color: red !important;
+}
