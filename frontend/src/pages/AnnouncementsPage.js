@@ -45,7 +45,7 @@ const suggestedKeywords = [
 const sources = [
   { value: 'kariyer', label: 'Kariyer.net' },
   { value: 'linkedin', label: 'LinkedIn' },
-  { value: 'indeed', label: 'Indeed' },
+  
 ];
 
 const salaryRanges = [

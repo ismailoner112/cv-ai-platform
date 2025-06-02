@@ -1,14 +1,21 @@
 // src/components/Navbar.js
 import React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 export default function Navbar() {
   const navigate = useNavigate()
-  const token = localStorage.getItem('token')
+  const { user, logout } = useAuth()
 
-  const handleLogout = () => {
-    localStorage.removeItem('token')
-    navigate('/auth', { replace: true })
+  const handleLogout = async () => {
+    try {
+      await logout()
+      navigate('/auth', { replace: true })
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Logout başarısız olsa bile auth sayfasına yönlendir
+      navigate('/auth', { replace: true })
+    }
   }
 
   return (
@@ -17,7 +24,7 @@ export default function Navbar() {
         CV_AI
       </Link>
 
-      {token && (
+      {user && (
         <>
           <nav className="flex space-x-4 ml-8">
             <Link

@@ -128,7 +128,7 @@ router.post('/login', async (req, res) => {
             const token = adminUser.generateAuthToken();
               res.cookie('token', token, {
             httpOnly: true,
-            secure: false,       // prod’da HTTPS kullanıyorsanız true yapın
+            secure: false,       // prod'da HTTPS kullanıyorsanız true yapın
             sameSite: 'Lax',     // cross-site durumları için 'None' veya 'Strict' / 'Lax' ayarlayın
             maxAge: 60 * 60 * 1000  // 1 saat (ms cinsinden)
           });
@@ -158,7 +158,7 @@ router.post('/login', async (req, res) => {
     const token = user.generateAuthToken();
               res.cookie('token', token, {
             httpOnly: true,
-            secure: false,       // prod’da HTTPS kullanıyorsanız true yapın
+            secure: false,       // prod'da HTTPS kullanıyorsanız true yapın
             sameSite: 'Lax',     // cross-site durumları için 'None' veya 'Strict' / 'Lax' ayarlayın
             maxAge: 60 * 60 * 1000  // 1 saat (ms cinsinden)
           });
@@ -198,7 +198,15 @@ router.post('/refresh', auth, (req, res) => {
 // POST /api/auth/logout
 // —————————————
 router.post('/logout', auth, (_req, res) => {
-  res.json({ success:true, message:'Çıkış yapıldı.' });
+  // Cookie'yi temizle
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: false,
+    sameSite: 'Lax',
+    path: '/'
+  });
+  
+  res.json({ success: true, message: 'Çıkış yapıldı.' });
 });
 
 module.exports = router;
