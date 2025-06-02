@@ -234,12 +234,220 @@ export const endpoints = {
     },
   },
 
-  // Analysis endpoints
+  // Analysis endpoints - GEMİNİ API kullanarak
   analysis: {
-    analyze: formData => api.post('/api/analysis', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
-    getHistory: () => api.get('/api/analysis/history'),
-    getDetails: id => api.get(`/api/analysis/${id}`),
-    deleteAnalysis: id => api.delete(`/api/analysis/${id}`)
+    // Gemini API ile CV ve şirket analizi
+    analyze: async (formData) => {
+      try {
+        const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY || "AIzaSyD2vsbO55zUlo0LRyJdqmcRVXTBjkAEXQ4";
+        const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent";
+        
+        // FormData'dan değerleri al
+        const companyUrl = formData.get('companyUrl');
+        const cvFile = formData.get('cvFile');
+        
+        if (!companyUrl && !cvFile) {
+          throw new Error('Analiz yapmak için en az bir CV dosyası veya şirket URL\'si gerekli.');
+        }
+
+        let analysisPrompt = "Sen bir CV ve şirket analizi uzmanısın. ";
+        let parts = [];
+
+        // URL analizi
+        if (companyUrl) {
+          try {
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(companyUrl)}`;
+            const urlResponse = await fetch(proxyUrl);
+            const data = await urlResponse.json();
+            const htmlContent = data.contents;
+            
+            // HTML içeriğini temizle (basit metin çıkarma)
+            const textContent = htmlContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+            const limitedContent = textContent.substring(0, 5000); // İçeriği sınırla
+            
+            analysisPrompt += `\n\nŞirket Web Sitesi Analizi (${companyUrl}):\n${limitedContent}`;
+          } catch (error) {
+            console.error('URL fetch error:', error);
+            analysisPrompt += `\n\nŞirket URL'si: ${companyUrl} (İçerik alınamadı - CORS hatası)`;
+          }
+        }
+
+        // PDF dosyası analizi
+        if (cvFile && cvFile instanceof File) {
+          try {
+            // PDF'i base64'e çevir
+            const fileBuffer = await cvFile.arrayBuffer();
+            const base64Data = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)));
+            
+            // Gemini PDF desteği için inline_data kullan
+            parts.push({
+              inline_data: {
+                mime_type: cvFile.type,
+                data: base64Data
+              }
+            });
+            
+            analysisPrompt += "\n\nCV Dosyası (PDF) analizi yapılacak.";
+          } catch (error) {
+            console.error('PDF processing error:', error);
+            analysisPrompt += "\n\nCV dosyası işlenemedi.";
+          }
+        }
+
+        // Analiz promptu
+        analysisPrompt += `
+
+Lütfen aşağıdaki analizi yap ve sadece JSON formatında yanıt ver:
+
+1. **Şirket Analizi** (eğer URL verilmişse):
+   - Hizmet alanları
+   - Ana teknolojiler  
+   - Proje tipleri
+   - İletişim bilgileri
+
+2. **CV Analizi** (eğer dosya verilmişse):
+   - Özet bilgiler
+   - Temel yetenekler
+   - Deneyim seviyesi
+   - Eğitim durumu
+
+3. **Uyumluluk Analizi** (her ikisi de verilmişse):
+   - Eşleşme yüzdesi (0-100)
+   - İyileştirme önerileri
+   - Eksik beceriler
+
+Yanıtını SADECE şu JSON formatında ver:
+{
+  "summary": "Genel analiz özeti",
+  "serviceArea": "Şirket hizmet alanı", 
+  "technologies": ["teknoloji1", "teknoloji2"],
+  "projects": ["proje tipi1", "proje tipi2"],
+  "contactInfo": "İletişim bilgileri",
+  "probability": 85,
+  "suggestions": ["öneri1", "öneri2", "öneri3"]
+}`;
+
+        // Text prompt'u da ekle
+        parts.push({
+          text: analysisPrompt
+        });
+
+        console.log('Sending analysis to Gemini API...');
+
+        const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: parts
+            }]
+          })
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Gemini API Error Response:', errorText);
+          throw new Error(`Gemini API Error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('Gemini Analysis Response:', data);
+        
+        // Gemini API yanıtını işle
+        let analysisResult = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Analiz yanıtı alınamadı.';
+        
+        // JSON kısmını çıkart
+        const jsonMatch = analysisResult.match(/```json\n([\s\S]*?)```/) || 
+                         analysisResult.match(/\{[\s\S]*\}/);
+        
+        let parsedResult;
+        if (jsonMatch) {
+          try {
+            const jsonStr = jsonMatch[1] || jsonMatch[0];
+            parsedResult = JSON.parse(jsonStr);
+          } catch (parseError) {
+            console.error('JSON parse error:', parseError);
+            parsedResult = {
+              summary: analysisResult,
+              error: 'Yanıt JSON formatında işlenemedi',
+              raw: analysisResult
+            };
+          }
+        } else {
+          parsedResult = {
+            summary: analysisResult,
+            error: 'JSON yanıt bulunamadı',
+            raw: analysisResult
+          };
+        }
+
+        // localStorage'a kaydet
+        const analysisId = Date.now().toString();
+        const newAnalysis = {
+          _id: analysisId,
+          companyUrl: companyUrl || null,
+          filename: cvFile ? cvFile.name : null,
+          cvFileName: cvFile ? cvFile.name : null,
+          status: 'completed',
+          createdAt: new Date().toISOString(),
+          ...parsedResult
+        };
+
+        const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
+        history.unshift(newAnalysis);
+        localStorage.setItem('analysisHistory', JSON.stringify(history));
+
+        return {
+          data: {
+            success: true,
+            message: 'Analiz tamamlandı',
+            analysisId: analysisId
+          }
+        };
+
+      } catch (error) {
+        console.error('Gemini Analysis Error:', error);
+        throw error;
+      }
+    },
+    
+    // Geçmiş analizler (localStorage'da saklanacak)
+    getHistory: () => {
+      try {
+        const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
+        return Promise.resolve({ data: { analyses: history } });
+      } catch (error) {
+        return Promise.resolve({ data: { analyses: [] } });
+      }
+    },
+    
+    // Belirli analiz detayı (localStorage'dan)
+    getDetails: (id) => {
+      try {
+        const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
+        const analysis = history.find(item => item._id === id);
+        if (!analysis) {
+          throw new Error('Analiz bulunamadı');
+        }
+        return Promise.resolve({ data: { analysis } });
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    },
+    
+    // Analiz silme (localStorage'dan)
+    deleteAnalysis: (id) => {
+      try {
+        const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
+        const updatedHistory = history.filter(item => item._id !== id);
+        localStorage.setItem('analysisHistory', JSON.stringify(updatedHistory));
+        return Promise.resolve({ data: { success: true } });
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    }
   },
 
   // Chat endpoints
