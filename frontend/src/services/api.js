@@ -563,6 +563,10 @@ Yanıtını SADECE şu JSON formatında ver:
     getDetails: (slug) => api.get(`/api/gallery/${slug}`),
     // Şablon sil (Admin)
     delete: (id) => api.delete(`/api/gallery/${id}`),
+    // PDF İndir
+    download: (id) => api.get(`/api/gallery/download/${id}`, { responseType: 'blob' }),
+    // PDF Görüntüle
+    view: (id) => `/api/gallery/view/${id}`,
   },
 
   // Visitors endpoints

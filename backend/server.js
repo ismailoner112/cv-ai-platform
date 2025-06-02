@@ -156,7 +156,7 @@ app.use('/api/analysis', auth, analysisRouter);
 app.use('/api/chat', auth, chatRouter);
 app.use('/api/announcements', auth, announcementsRouter);
 app.use('/api/visitors', auth, visitorsRouter);
-app.use('/api/gallery', auth, galleryRouter);
+app.use('/api/gallery', galleryRouter);
 app.use('/api/users', auth, isAdmin, usersRouter);
 app.use('/api/jobs', auth, isAdmin, jobsRouter);
 console.log('TRACE: After mounting other protected routes'); // TRACE 12 Updated

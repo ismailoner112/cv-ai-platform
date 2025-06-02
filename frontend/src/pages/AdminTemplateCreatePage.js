@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import {
   Box, Typography, TextField,
-  Button, CircularProgress
+  Button, CircularProgress, Alert
 } from '@mui/material';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCsrf } from '../hooks/useCsrf';
@@ -14,39 +14,84 @@ export default function AdminTemplateCreatePage() {
   const [description, setDescription] = useState('');
   const [file, setFile]               = useState(null);
   const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState('');
 
   const handleSubmit = async e => {
     e.preventDefault();
+    setError('');
+    
     if (!title.trim() || !file) {
-      return alert('Başlık ve PDF dosyası gerekli');
+      setError('Başlık ve PDF dosyası gerekli');
+      return;
+    }
+
+    if (file.type !== 'application/pdf') {
+      setError('Sadece PDF formatında dosya yükleyebilirsiniz');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) { // 10MB
+      setError('Dosya boyutu 10MB\'dan büyük olamaz');
+      return;
     }
 
     setLoading(true);
-    const form = new FormData();
-    form.append('title',       title.trim());
-    form.append('description', description);
-    form.append('file',        file);
+    
+    try {
+      const form = new FormData();
+      form.append('title',       title.trim());
+      form.append('description', description);
+      form.append('file',        file);
 
-   // JWT token'ı localStorage'dan al
-   const token = localStorage.getItem('token');
+      // JWT token'ı localStorage'dan al
+      const token = localStorage.getItem('token');
 
-    const res = await fetch('/api/gallery', {
-      method:      'POST',
-      credentials: 'include',
-      headers: {
-       'Authorization': `Bearer ${token}`,
-        'X-CSRF-Token':    csrfToken
-      },
-      body: form
-    });
+      console.log('PDF yükleme başlıyor...', {
+        title: title.trim(),
+        description,
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type
+      });
 
-    setLoading(false);
+      const res = await fetch('/api/gallery', {
+        method:      'POST',
+        credentials: 'include',
+        headers: {
+         'Authorization': `Bearer ${token}`,
+          'X-CSRF-Token':    csrfToken
+        },
+        body: form
+      });
 
-    if (res.ok) {
-      navigate('/admin/templates');
-    } else {
-      const err = await res.json();
-      alert(err.message || 'Yükleme başarısız');
+      const data = await res.json();
+      console.log('Sunucu yanıtı:', data);
+
+      if (res.ok && data.success) {
+        console.log('PDF başarıyla yüklendi');
+        navigate('/admin/templates');
+      } else {
+        console.error('Yükleme hatası:', data);
+        setError(data.message || 'Yükleme başarısız');
+      }
+    } catch (error) {
+      console.error('Network hatası:', error);
+      setError('Ağ hatası oluştu. Lütfen tekrar deneyin.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      console.log('Seçilen dosya:', {
+        name: selectedFile.name,
+        size: selectedFile.size,
+        type: selectedFile.type
+      });
+      setFile(selectedFile);
+      setError(''); // Dosya seçildiğinde hatayı temizle
     }
   };
 
@@ -74,6 +119,12 @@ export default function AdminTemplateCreatePage() {
         <Button variant="contained" component={Link} to="/admin/templates">Şablon Yönetimi</Button>
       </Box>
 
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
       <TextField
         label="Şablon Başlığı"
         value={title}
@@ -84,17 +135,31 @@ export default function AdminTemplateCreatePage() {
         label="Açıklama (isteğe bağlı)"
         value={description}
         onChange={e => setDescription(e.target.value)}
+        multiline
+        rows={3}
       />
-      <Button variant="outlined" component="label">
-        PDF Seç
-        <input
-          hidden
-          type="file"
-          accept="application/pdf"
-          onChange={e => setFile(e.target.files[0])}
-        />
-      </Button>
-      <Button type="submit" variant="contained" disabled={loading}>
+      <Box>
+        <Button variant="outlined" component="label" fullWidth>
+          {file ? `PDF Seçildi: ${file.name}` : 'PDF Seç'}
+          <input
+            hidden
+            type="file"
+            accept="application/pdf"
+            onChange={handleFileChange}
+          />
+        </Button>
+        {file && (
+          <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
+            Dosya boyutu: {(file.size / 1024 / 1024).toFixed(2)} MB
+          </Typography>
+        )}
+      </Box>
+      <Button 
+        type="submit" 
+        variant="contained" 
+        disabled={loading || !title.trim() || !file}
+        sx={{ mt: 2 }}
+      >
         {loading ? <CircularProgress size={24}/> : 'Yükle'}
       </Button>
     </Box>

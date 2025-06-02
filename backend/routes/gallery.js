@@ -40,24 +40,112 @@ const upload = multer({
 });
 
 // 1) Yeni şablon yükle (Admin)
-router.post('/', auth, isAdmin, upload.single('file'), async (req, res) => {
+router.post('/', auth, isAdmin, (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      console.error('Multer hatası:', err);
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ success: false, message: 'Dosya boyutu çok büyük (Max: 10MB)' });
+        }
+        return res.status(400).json({ success: false, message: 'Dosya yükleme hatası: ' + err.message });
+      }
+      return res.status(400).json({ success: false, message: err.message });
+    }
+    next();
+  });
+}, async (req, res) => {
     try {
+      console.log('PDF yükleme işlemi başlatıldı...');
+      console.log('Request body:', req.body);
+      console.log('Request file:', req.file);
+      
       const { title, description = '' } = req.body;
       if (!req.file) {
+        console.error('Dosya yüklenmedi');
         return res.status(400).json({ success: false, message: 'CV dosyası yüklenmedi.' });
       }
+      
       const filename = req.file.filename;
+      console.log('Yüklenen dosya adı:', filename);
+      
       const item = await Gallery.create({
         title: title.trim(),
         description,
         filename,
         author: req.user._id
       });
+      
+      console.log('Şablon başarıyla oluşturuldu:', item._id);
       res.status(201).json({ success: true, item });
     } catch (err) {
       console.error('Şablon yükleme hatası:', err);
-      res.status(500).json({ success: false, message: 'Şablon yüklenirken hata oluştu.' });
+      res.status(500).json({ success: false, message: 'Şablon yüklenirken hata oluştu: ' + err.message });
     }
+});
+
+// PDF görüntüleme rotası (Public) - Öncelik sırasını korumak için en üstte
+router.get('/view/:id', async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return res.status(400).json({ success: false, message: 'Geçersiz şablon ID' });
+    }
+    
+    const item = await Gallery.findById(req.params.id);
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Şablon bulunamadı.' });
+    }
+
+    const filePath = path.join(uploadDir, item.filename);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ success: false, message: 'Dosya bulunamadı.' });
+    }
+
+    // PDF dosyasını görüntüleme için uygun headers ayarla
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${item.title}.pdf"`);
+    
+    // Dosyayı stream olarak gönder
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+    
+  } catch (err) {
+    console.error('PDF görüntüleme hatası:', err);
+    res.status(500).json({ success: false, message: 'Dosya görüntülenirken hata oluştu.' });
+  }
+});
+
+// PDF İndirme rotası
+router.get('/download/:id', async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return res.status(400).json({ success: false, message: 'Geçersiz şablon ID' });
+    }
+    
+    const item = await Gallery.findById(req.params.id);
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Şablon bulunamadı.' });
+    }
+
+    const filePath = path.join(uploadDir, item.filename);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ success: false, message: 'Dosya bulunamadı.' });
+    }
+
+    // PDF dosyasını indirme için uygun headers ayarla
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${item.title}.pdf"`);
+    
+    // Dosyayı stream olarak gönder
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+    
+  } catch (err) {
+    console.error('PDF indirme hatası:', err);
+    res.status(500).json({ success: false, message: 'Dosya indirilirken hata oluştu.' });
+  }
 });
 
 // Admin için şablon listesi (bu rota genel rotadan önce gelmelidir)

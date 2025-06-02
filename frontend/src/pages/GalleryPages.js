@@ -17,12 +17,18 @@ import {
   useTheme,
   IconButton,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   Search as SearchIcon,
   Download as DownloadIcon,
   Visibility as VisibilityIcon,
   Sort as SortIcon,
+  PictureAsPdf as PdfIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { gallery } from '../services/api';
@@ -33,6 +39,8 @@ export default function GalleryPages() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('createdAtDesc');
   const [loading, setLoading] = useState(false);
+  const [selectedPdf, setSelectedPdf] = useState(null);
+  const [pdfModalOpen, setPdfModalOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -55,6 +63,40 @@ export default function GalleryPages() {
     fetchItems();
   }, [searchTerm, sortBy]);
 
+  const handleDownload = async (item) => {
+    try {
+      // API'den download endpoint'ini kullan
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/gallery/download/${item._id}`);
+      
+      if (!response.ok) {
+        throw new Error('İndirme başarısız');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${item.title}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('İndirme hatası:', error);
+      alert('PDF indirilemedi. Lütfen tekrar deneyin.');
+    }
+  };
+
+  const handleViewPdf = (item) => {
+    setSelectedPdf(item);
+    setPdfModalOpen(true);
+  };
+
+  const handleClosePdfModal = () => {
+    setPdfModalOpen(false);
+    setSelectedPdf(null);
+  };
+
   const handleGoBack = () => {
     navigate(-1);
   };
@@ -73,7 +115,7 @@ export default function GalleryPages() {
             mb: 2,
           }}
         >
-          CV Sablonlari
+          CV Şablonları
         </Typography>
         <Typography
           variant="subtitle1"
@@ -81,7 +123,7 @@ export default function GalleryPages() {
           color="text.secondary"
           sx={{ mb: 4 }}
         >
-          Profesyonel CV sablonlarini inceleyin ve kariyeriniz icin en uygun olani secin
+          Profesyonel CV şablonlarını inceleyin ve kariyeriniz için en uygun olanı seçin
         </Typography>
 
         {/* Search and Sort */}
@@ -96,7 +138,7 @@ export default function GalleryPages() {
           }}
         >
           <TextField
-            label="Baslik Ara"
+            label="Başlık Ara"
             variant="outlined"
             size="small"
             value={searchTerm}
@@ -122,17 +164,17 @@ export default function GalleryPages() {
               },
             }}
           >
-            <InputLabel>Siralama</InputLabel>
+            <InputLabel>Sıralama</InputLabel>
             <Select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              label="Siralama"
+              label="Sıralama"
               startAdornment={<SortIcon sx={{ color: 'text.secondary', mr: 1 }} />}
             >
-              <MenuItem value="createdAtDesc">En Yeni (Once)</MenuItem>
-              <MenuItem value="createdAtAsc">En Eski (Once)</MenuItem>
-              <MenuItem value="titleAsc">Basliga Gore (A-Z)</MenuItem>
-              <MenuItem value="titleDesc">Basliga Gore (Z-A)</MenuItem>
+              <MenuItem value="createdAtDesc">En Yeni (Önce)</MenuItem>
+              <MenuItem value="createdAtAsc">En Eski (Önce)</MenuItem>
+              <MenuItem value="titleAsc">Başlığa Göre (A-Z)</MenuItem>
+              <MenuItem value="titleDesc">Başlığa Göre (Z-A)</MenuItem>
             </Select>
           </FormControl>
         </Box>
@@ -140,12 +182,12 @@ export default function GalleryPages() {
         {/* Gallery Grid */}
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-            <Typography>Yukleniyor...</Typography>
+            <Typography>Yükleniyor...</Typography>
           </Box>
         ) : items.length === 0 ? (
           <Box sx={{ textAlign: 'center', my: 4 }}>
             <Typography color="text.secondary">
-              Henuz sablon yuklenmemis veya arama kriterlerinize uygun sonuc bulunamadi.
+              Henüz şablon yüklenmemiş veya arama kriterlerinize uygun sonuç bulunamadı.
             </Typography>
           </Box>
         ) : (
@@ -164,18 +206,26 @@ export default function GalleryPages() {
                     },
                   }}
                 >
-                  {item.filename && (
-                    <CardMedia
-                      component="img"
-                      height="200"
-                      image={`${process.env.REACT_APP_API_URL}/uploads/gallery/${item.filename}`}
-                      alt={item.title}
-                      sx={{
-                        objectFit: 'cover',
-                        borderBottom: `1px solid ${theme.palette.divider}`,
-                      }}
+                  {/* PDF Preview */}
+                  <Box
+                    sx={{
+                      height: 200,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: theme.palette.grey[100],
+                      borderBottom: `1px solid ${theme.palette.divider}`,
+                    }}
+                  >
+                    <PdfIcon 
+                      sx={{ 
+                        fontSize: 80, 
+                        color: theme.palette.error.main,
+                        opacity: 0.7 
+                      }} 
                     />
-                  )}
+                  </Box>
+                  
                   <CardContent sx={{ flexGrow: 1 }}>
                     <Typography
                       variant="h6"
@@ -202,7 +252,7 @@ export default function GalleryPages() {
                         mb: 2,
                       }}
                     >
-                      {item.description || 'Aciklama yok.'}
+                      {item.description || 'Açıklama yok.'}
                     </Typography>
                     {item.tags && item.tags.length > 0 && (
                       <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 2 }}>
@@ -233,24 +283,19 @@ export default function GalleryPages() {
                           variant="outlined"
                           size="small"
                           startIcon={<VisibilityIcon />}
-                          component="a"
-                          href={`${process.env.REACT_APP_API_URL}/uploads/gallery/${item.filename}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          onClick={() => handleViewPdf(item)}
                           sx={{ borderRadius: 2 }}
                         >
-                          Goruntule
+                          Görüntüle
                         </Button>
                         <Button
                           variant="contained"
                           size="small"
                           startIcon={<DownloadIcon />}
-                          component="a"
-                          href={`${process.env.REACT_APP_API_URL}/uploads/gallery/${item.filename}`}
-                          download
+                          onClick={() => handleDownload(item)}
                           sx={{ borderRadius: 2 }}
                         >
-                          Indir
+                          İndir
                         </Button>
                       </>
                     )}
@@ -261,6 +306,57 @@ export default function GalleryPages() {
           </Grid>
         )}
       </Box>
+
+      {/* PDF Görüntüleme Modal */}
+      <Dialog
+        open={pdfModalOpen}
+        onClose={handleClosePdfModal}
+        maxWidth="lg"
+        fullWidth
+        sx={{
+          '& .MuiDialog-paper': {
+            height: '90vh',
+            maxHeight: '90vh',
+          },
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6">
+            {selectedPdf?.title} - PDF Görüntüle
+          </Typography>
+          <IconButton
+            edge="end"
+            color="inherit"
+            onClick={handleClosePdfModal}
+            aria-label="kapat"
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0, height: '100%' }}>
+          {selectedPdf && (
+            <iframe
+              src={`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/gallery/view/${selectedPdf._id}`}
+              width="100%"
+              height="100%"
+              style={{ border: 'none', minHeight: '600px' }}
+              title={`${selectedPdf.title} PDF Görüntüleyici`}
+            />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => handleDownload(selectedPdf)} 
+            startIcon={<DownloadIcon />}
+            variant="contained"
+          >
+            İndir
+          </Button>
+          <Button onClick={handleClosePdfModal}>
+            Kapat
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }
