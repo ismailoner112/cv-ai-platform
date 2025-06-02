@@ -13,7 +13,7 @@ export default function Navbar() {
 
   return (
     <header className="bg-white shadow flex items-center px-6 py-3">
-      <Link to="/" className="text-2xl font-bold text-blue-600">
+      <Link to="/dashboard" className="text-2xl font-bold text-blue-600">
         CV_AI
       </Link>
 

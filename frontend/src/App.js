@@ -51,14 +51,37 @@ function App() {
             <Routes>
               {/* Public Routes */}
               <Route path="/auth" element={<AuthPage />} />
+              
+              {/* Default route redirects to auth */}
+              <Route path="/" element={<Navigate to="/auth" replace />} />
 
               {/* Protected Routes with Layout */}
               <Route element={<Layout />}>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/analysis" element={<AnalysisPage />} />
-                <Route path="/announcements" element={<AnnouncementsPage />} />
-                <Route path="/chat" element={<ChatPage />} />
-                <Route path="/gallery" element={<GalleryPages />} />
+                <Route path="/dashboard" element={
+                  <PrivateRoute>
+                    <HomePage />
+                  </PrivateRoute>
+                } />
+                <Route path="/analysis" element={
+                  <PrivateRoute>
+                    <AnalysisPage />
+                  </PrivateRoute>
+                } />
+                <Route path="/announcements" element={
+                  <PrivateRoute>
+                    <AnnouncementsPage />
+                  </PrivateRoute>
+                } />
+                <Route path="/chat" element={
+                  <PrivateRoute>
+                    <ChatPage />
+                  </PrivateRoute>
+                } />
+                <Route path="/gallery" element={
+                  <PrivateRoute>
+                    <GalleryPages />
+                  </PrivateRoute>
+                } />
 
                 {/* Admin Routes */}
                 <Route path="/admin/announcements" element={
@@ -84,7 +107,7 @@ function App() {
               </Route>
 
               {/* Catch all route */}
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<Navigate to="/auth" replace />} />
             </Routes>
           </Router>
         </AuthProvider>

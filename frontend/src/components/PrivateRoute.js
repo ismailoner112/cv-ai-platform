@@ -57,8 +57,8 @@ export default function PrivateRoute({ children, role }) {
   }
 
   if (role && user?.role !== role) {
-    // If role is specified and user doesn't have it, redirect to home
-    return <Navigate to="/" replace />;
+    // If role is specified and user doesn't have it, redirect to dashboard
+    return <Navigate to="/dashboard" replace />;
   }
 
   console.log('PrivateRoute rendering children');

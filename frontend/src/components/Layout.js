@@ -31,7 +31,7 @@ import { useAuth } from '../context/AuthContext'
 const drawerWidth = 260
 
 const menuItems = [
-  { text: 'Ana Sayfa', icon: <HomeIcon />, path: '/' },
+  { text: 'Ana Sayfa', icon: <HomeIcon />, path: '/dashboard' },
   { text: 'İş İlanları', icon: <WorkIcon />, path: '/announcements' },
   { text: 'Sohbet', icon: <ChatIcon />, path: '/chat' },
   { text: 'Galeri', icon: <ImageIcon />, path: '/gallery' },

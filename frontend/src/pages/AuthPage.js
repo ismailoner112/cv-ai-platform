@@ -128,7 +128,7 @@ const AuthPage = () => {
         
         if (response.data.success) {
           showNotification('Kullanıcı Girişi başarılı', 'success');
-          navigate('/analysis'); // Kullanıcılar için varsayılan yönlendirme
+          navigate('/dashboard'); // Kullanıcılar için varsayılan yönlendirme
         }
       } else if (activeTab === 1) { // Kullanıcı Kayıt
          const response = await auth.register({
@@ -140,7 +140,7 @@ const AuthPage = () => {
          
          if (response.data.success) {
            showNotification('Kayıt başarılı', 'success');
-           navigate('/analysis'); // Kayıt sonrası varsayılan yönlendirme
+           navigate('/dashboard'); // Kayıt sonrası varsayılan yönlendirme
          }
       
       } /* Admin Girişi kısmı kaldırıldı */

@@ -119,7 +119,7 @@ const AdminAuthPage = () => {
           } else {
                // Admin giriş sayfasından normal kullanıcı girişi yapılırsa
                showNotification('Kullanıcı Girişi başarılı', 'success');
-               navigate('/analysis'); // Kullanıcılar için varsayılan yönlendirme
+               navigate('/dashboard'); // Kullanıcılar için varsayılan yönlendirme
           }
 
       } /* Backend hata döndürürse catch bloğu çalışır */

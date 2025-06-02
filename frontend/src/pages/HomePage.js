@@ -125,32 +125,7 @@ export default function HomePage() {
       </Grid>
 
       {/* Call to Action */}
-      <Box
-        sx={{
-          bgcolor: 'primary.main',
-          color: 'primary.contrastText',
-          p: 6,
-          borderRadius: 2,
-          textAlign: 'center',
-          mb: 8,
-        }}
-      >
-        <Typography variant="h4" gutterBottom>
-          Hemen Baslayin
-        </Typography>
-        <Typography variant="body1" paragraph>
-          CV AI ile kariyerinizi bir ust seviyeye tasiyin. Ucretsiz hesap olusturun ve tum ozelliklere erisin.
-        </Typography>
-        <Button
-          variant="contained"
-          color="secondary"
-          size="large"
-          onClick={() => navigate('/auth')}
-          sx={{ mt: 2 }}
-        >
-          Ucretsiz Hesap Olustur
-        </Button>
-      </Box>
+      
     </Container>
   );
 }
