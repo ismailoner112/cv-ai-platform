@@ -31,15 +31,14 @@ import AdminTemplatesPage from './pages/AdminTemplatesPage';
 import AdminTemplateCreatePage from './pages/AdminTemplateCreatePage';
 import AdminTemplateEditPage from './pages/AdminTemplateEditPage';
 
-// Placeholder for the Chat Page (No longer needed, but keeping comment for clarity)
-// const ChatPlaceholder = () => (
-//   <Box sx={{ p: 3, textAlign: 'center' }}>
-//     <Typography variant="h4">Sohbet Sayfası</Typography>
-//     <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
-//       Bu sayfa henüz yapım aşamasındadır.
-//     </Typography>
-//   </Box>
-// );
+// Component to handle root route redirect based on auth status
+const RootRedirect = () => {
+  return (
+    <PrivateRoute>
+      <Navigate to="/dashboard" replace />
+    </PrivateRoute>
+  );
+};
 
 function App() {
   return (
@@ -53,8 +52,8 @@ function App() {
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/admin/auth" element={<AdminAuthPage />} />
               
-              {/* Default route redirects to auth */}
-              <Route path="/" element={<Navigate to="/auth" replace />} />
+              {/* Root route - redirects based on auth status */}
+              <Route path="/" element={<RootRedirect />} />
 
               {/* Protected Routes with Layout - Tüm sayfalar korunuyor */}
               <Route element={

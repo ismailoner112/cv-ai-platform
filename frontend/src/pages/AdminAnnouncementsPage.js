@@ -175,21 +175,75 @@ export default function AdminAnnouncementsPage() {
     }
   }
 
-  // İş ilanlarını çeken fonksiyon
+  // İş ilanlarını çeken fonksiyon (External Web Scraping)
   const handleScrapeJobs = async () => {
+    if (!scrapeSource || !scrapeKeyword.trim()) {
+      showNotification('Lütfen kaynak ve anahtar kelime seçiniz.', 'warning')
+      return
+    }
+
     setScraping(true)
     try {
-      // api.js üzerinden iş ilanlarını çekme rotasını çağır
-      const res = await jobs.scrape({ source: scrapeSource, keyword: scrapeKeyword })
+      console.log('External web scraping başlatılıyor:', { source: scrapeSource, keyword: scrapeKeyword.trim() })
+      
+      // API çağrısını doğru formatta yap
+      const res = await jobs.scrape({ source: scrapeSource, keyword: scrapeKeyword.trim() })
+      
+      console.log('External web scraping yanıtı:', res.data)
+      
       if (res.data.success) {
-        showNotification(res.data.message || 'İş ilanları başarıyla çekildi.', 'success')
-        fetchAnns() // Yeni ilanlar çekildikten sonra duyuruları yeniden çek
+        const { data } = res.data
+        let message = res.data.message || 'Web sitelerinden ilanlar başarıyla çekildi'
+        
+        if (data) {
+          // Bulunan ilanları detaylarıyla göster
+          if (data.results && data.results.length > 0) {
+            message += `\n\n📋 Bulunan İlanlar:\n`
+            data.results.slice(0, 5).forEach((job, index) => {
+              message += `${index + 1}. ${job.company} - ${job.title} (${job.location})\n`
+            })
+            
+            if (data.results.length > 5) {
+              message += `... ve ${data.results.length - 5} ilan daha\n`
+            }
+            
+            message += `\n💾 Toplam: ${data.scrapedCount} ilan bulundu`
+            message += `\n🆕 Yeni: ${data.createdCount} ilan eklendi`
+            message += `\n🔄 Güncellenen: ${data.updatedCount} ilan`
+            message += `\n🔍 Kaynak: ${scrapeSource === 'all' ? 'Tüm Kaynaklar' : scrapeSource.toUpperCase()}`
+            message += `\n🏷️ Anahtar Kelime: "${scrapeKeyword}"`
+          } else {
+            message = `"${scrapeKeyword}" anahtar kelimesi için ${scrapeSource === 'all' ? 'hiçbir web sitesinde' : scrapeSource + ' web sitesinde'} ilan bulunamadı.`
+          }
+        }
+        
+        showNotification(message, data?.results?.length > 0 ? 'success' : 'info')
+        
+        // Başarılı scraping sonrası, eğer yeni ilanlar bulunduysa announcements'ı yenile
+        if (data?.createdCount > 0) {
+          fetchAnns() // Güncel ilanları göstermek için yeniden çek
+        }
+        
       } else {
-        showNotification(res.data.message || 'İş ilanları çekilirken hata oluştu.', 'error')
+        console.error('External web scraping başarısız:', res.data)
+        let errorMessage = res.data.message || 'Web sitelerinden ilan çekilirken hata oluştu.'
+        showNotification(errorMessage, 'error')
       }
     } catch (err) {
-      console.error('İş ilanı çekme hatası:', err)
-      showNotification('İş ilanları çekilirken bir hata oluştu.', 'error')
+      console.error('External web scraping hatası:', err)
+      let errorMessage = 'Web sitelerinden ilan çekilirken bir hata oluştu.'
+      
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Bu işlem için yetkiniz bulunmuyor.'
+      } else if (err.response?.status === 500) {
+        errorMessage = 'Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyiniz.'
+      } else if (err.code === 'NETWORK_ERROR') {
+        errorMessage = 'Ağ bağlantısı hatası. İnternet bağlantınızı kontrol ediniz.'
+      }
+      
+      showNotification(errorMessage, 'error')
     } finally {
       setScraping(false)
     }
@@ -243,39 +297,73 @@ export default function AdminAnnouncementsPage() {
 
       {/* İş İlanı Çekme Alanı */}
       <Paper elevation={2} sx={{ p: 3, mb: 4, borderRadius: 2 }}>
-        <Typography variant="h6" gutterBottom>
-          Yeni İş İlanları Çek
+        <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+          <SearchIcon sx={{ mr: 1, color: 'primary.main' }} />
+          Web Scraping - Yeni İş İlanları Çek
         </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          Anahtar kelimeler doğrultusunda farklı iş sitelerinden otomatik ilan çekme
+        </Typography>
+        
+        <Box sx={{ mb: 3, p: 2, bgcolor: 'info.main', color: 'white', borderRadius: 1 }}>
+          <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+            💡 Kullanım İpuçları:
+          </Typography>
+          <Typography variant="body2" component="ul" sx={{ pl: 2, m: 0 }}>
+            <li>Spesifik teknoloji adları kullanın: "React", "Node.js", "Python"</li>
+            <li>Pozisyon adları yazın: "Full Stack Developer", "Frontend Developer"</li>
+            <li>Şirket türleri belirtin: "Yazılım Mühendisi", "DevOps Engineer"</li>
+            <li>Kombinasyonlar deneyin: "React Node.js", "JavaScript Full Stack"</li>
+          </Typography>
+        </Box>
+        
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} sm={4} md={3}>
             <FormControl fullWidth variant="outlined" size="small">
-              <InputLabel>Kaynak</InputLabel>
+              <InputLabel>Kaynak Seç *</InputLabel>
               <Select
                 value={scrapeSource}
                 onChange={e => setScrapeSource(e.target.value)}
-                label="Kaynak"
+                label="Kaynak Seç *"
                 disabled={scraping}
               >
-                <MenuItem value="">Tümü (Desteklenen)</MenuItem>
-                <MenuItem value="kariyernet">Kariyer.net</MenuItem>
-                <MenuItem value="linkedin">LinkedIn</MenuItem>
-                {/* Add other supported sources here */}
+                <MenuItem value="">-- Kaynak Seçin --</MenuItem>
+                <MenuItem value="all">🌐 Tüm Kaynaklar</MenuItem>
+                <MenuItem value="kariyernet">🏢 Kariyer.net</MenuItem>
+                <MenuItem value="linkedin">💼 LinkedIn</MenuItem>
               </Select>
             </FormControl>
           </Grid>
+          
           <Grid item xs={12} sm={8} md={6}>
              <Autocomplete
                 freeSolo
                 options={suggestedKeywords}
                 value={scrapeKeyword}
-                onInputChange={(_event, newValue) => { setScrapeKeyword(newValue); }}
-                onChange={(_event, newValue) => { if (newValue) setScrapeKeyword(newValue); else setScrapeKeyword(''); }}
+                onInputChange={(_event, newValue) => { setScrapeKeyword(newValue || ''); }}
+                onChange={(_event, newValue) => { setScrapeKeyword(newValue || ''); }}
                 disabled={scraping}
                 fullWidth
                 size="small"
-                renderInput={(params) => <TextField {...params} label="Anahtar Kelime" placeholder="Örn: React Developer" />}
+                renderInput={(params) => 
+                  <TextField 
+                    {...params} 
+                    label="Anahtar Kelime *" 
+                    placeholder="Örn: React Developer, Full Stack, Python..." 
+                    helperText="Önerilerden seçin veya kendi anahtar kelimenizi yazın"
+                  />
+                }
+                renderOption={(props, option) => {
+                  const { key, ...otherProps } = props;
+                  return (
+                    <Box component="li" key={key} {...otherProps}>
+                      <Typography variant="body2">{option}</Typography>
+                    </Box>
+                  );
+                }}
               />
           </Grid>
+          
           <Grid item xs={12} md={3}>
             <Button
               variant="contained"
@@ -283,11 +371,51 @@ export default function AdminAnnouncementsPage() {
               disabled={scraping || !scrapeSource || !scrapeKeyword.trim()}
               fullWidth
               startIcon={scraping ? <CircularProgress size={20} color="inherit" /> : <SearchIcon />}
+              sx={{ 
+                height: '40px',
+                background: scraping ? 'grey.400' : 'linear-gradient(45deg, #ff6b35 30%, #f7931e 90%)',
+                '&:hover': {
+                  background: scraping ? 'grey.400' : 'linear-gradient(45deg, #e55a2b 30%, #e8841b 90%)',
+                }
+              }}
             >
-              {scraping ? 'Çekiliyor...' : 'İş İlanlarını Çek'}
+              {scraping ? 'İşlem Yapılıyor...' : '🌐 Web Scraping'}
             </Button>
           </Grid>
         </Grid>
+        
+        {scraping && (
+          <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <CircularProgress size={16} sx={{ mr: 1 }} />
+              <Typography variant="body2" color="text.secondary">
+                "{scrapeKeyword}" anahtar kelimesi için {scrapeSource === 'all' ? 'tüm kaynaklardan' : scrapeSource} sitesinden ilanlar çekiliyor...
+              </Typography>
+            </Box>
+            
+            {/* Progress Indicator */}
+            <Box sx={{ 
+              p: 2, 
+              bgcolor: 'primary.main', 
+              color: 'white', 
+              borderRadius: 1, 
+              textAlign: 'center' 
+            }}>
+              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                🔍 Web Scraping İşlemi Devam Ediyor
+              </Typography>
+              <Typography variant="caption">
+                {scrapeSource === 'all' 
+                  ? 'Kariyer.net ve LinkedIn sitelerinden veri çekiliyor...' 
+                  : `${scrapeSource} sitesinden veri çekiliyor...`}
+              </Typography>
+              <br />
+              <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                Bu işlem 10-30 saniye sürebilir. Lütfen bekleyiniz...
+              </Typography>
+            </Box>
+          </Box>
+        )}
       </Paper>
 
       {/* Duyuru Listesi ve Filtreleme */}
@@ -370,6 +498,7 @@ export default function AdminAnnouncementsPage() {
                    <TableCell>Lokasyon</TableCell>
                    <TableCell>Çalışma Tipi</TableCell>
                   <TableCell>Yayın Tarihi</TableCell>
+                  <TableCell>Anahtar Kelimeler</TableCell>
                   <TableCell align="right">İşlemler</TableCell>
                 </TableRow>
               </TableHead>
@@ -382,6 +511,7 @@ export default function AdminAnnouncementsPage() {
                     <TableCell component="th" scope="row">
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
                          {ann.isPublished ? <PublishedIcon color="success" fontSize="small" sx={{ mr: 0.5 }} /> : <DraftIcon color="warning" fontSize="small" sx={{ mr: 0.5 }} />}
+                         {ann.scraped && <Chip label="SCRAPED" size="small" color="info" sx={{ mr: 1, fontSize: '0.7rem', height: '20px' }} />}
                          <Typography variant="body2" fontWeight="medium">{ann.title}</Typography>
                       </Box>
                     </TableCell>
@@ -398,6 +528,15 @@ export default function AdminAnnouncementsPage() {
                     <TableCell><Typography variant="body2">{ann.location || '-'}</Typography></TableCell>
                     <TableCell><Typography variant="body2">{ann.jobType || '-'}</Typography></TableCell>
                     <TableCell>{new Date(ann.publishDate).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      {ann.keywords && (
+                        <Chip
+                          label={ann.keywords.join(', ')}
+                          color="primary"
+                          size="small"
+                        />
+                      )}
+                    </TableCell>
                     <TableCell align="right">
                       <IconButton size="small" color="primary" /* onClick={() => handleEdit(ann)} */ disabled>
                         <EditIcon />

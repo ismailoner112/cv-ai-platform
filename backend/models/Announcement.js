@@ -38,12 +38,22 @@ const announcementSchema = new mongoose.Schema({
       message: 'Geçerli bir URL giriniz'
     }
   },
+  originalUrl: {
+    type: String,
+    trim: true,
+    validate: {
+      validator: function(v) {
+        return !v || /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/.test(v);
+      },
+      message: 'Geçerli bir URL giriniz'
+    }
+  },
   source: {
     type: String,
     required: [true, 'Kaynak zorunludur'],
     enum: {
-      values: ['kariyernet', 'linkedin'],
-      message: 'Kaynak "kariyernet" veya "linkedin" olmalıdır'
+      values: ['kariyernet', 'linkedin', 'manual'],
+      message: 'Kaynak "kariyernet", "linkedin" veya "manual" olmalıdır'
     }
   },
   jobType: {
@@ -95,6 +105,19 @@ const announcementSchema = new mongoose.Schema({
   favorites: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
+  }],
+  // Scraping ile ilgili alanlar
+  scraped: {
+    type: Boolean,
+    default: false
+  },
+  lastScrapedAt: {
+    type: Date,
+    default: null
+  },
+  keywords: [{
+    type: String,
+    trim: true
   }]
 }, {
   timestamps: true,

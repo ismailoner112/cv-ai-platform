@@ -126,8 +126,14 @@ const AuthPage = () => {
         const result = await login(formData.email, formData.password);
         
         if (result.success) {
-          showNotification('Kullanıcı Girişi başarılı', 'success');
-          navigate('/dashboard'); // Kullanıcılar için varsayılan yönlendirme
+          // Kullanıcının rolüne göre farklı mesaj göster
+          if (result.user?.role === 'admin') {
+            showNotification('Admin Girişi başarılı', 'success');
+            navigate('/stats'); // Adminler için varsayılan yönlendirme
+          } else {
+            showNotification('Kullanıcı Girişi başarılı', 'success');
+            navigate('/dashboard'); // Kullanıcılar için varsayılan yönlendirme
+          }
         } else {
           showNotification(result.message || 'Giriş başarısız', 'error');
         }
@@ -144,7 +150,12 @@ const AuthPage = () => {
            // Kayıt sonrası otomatik login yap
            const loginResult = await login(formData.email, formData.password);
            if (loginResult.success) {
-             navigate('/dashboard');
+             // Rolüne göre yönlendirme yap
+             if (loginResult.user?.role === 'admin') {
+               navigate('/stats');
+             } else {
+               navigate('/dashboard');
+             }
            }
          }
       

@@ -75,16 +75,19 @@ export const NotificationProvider = ({ children }) => {
       <Snackbar
         key={notification.key}
         open={notification.open}
-        autoHideDuration={6000}
+        autoHideDuration={notification.severity === 'error' ? 10000 : 6000}
         onClose={hideNotification}
-        anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         sx={{
           '& .MuiAlert-root': {
             width: '100%',
-            maxWidth: '400px'
+            maxWidth: '600px',
+            whiteSpace: 'pre-line'
           },
           '& .MuiAlert-message': {
-            color: notification.severity === 'success' ? 'green' : '#333',
+            color: notification.severity === 'success' ? 'white' : 'inherit',
+            fontSize: '0.9rem',
+            lineHeight: 1.4
           },
         }}
       >

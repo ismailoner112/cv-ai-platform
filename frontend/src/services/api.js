@@ -135,7 +135,6 @@ api.interceptors.response.use(
         });
       }
     }
-
     return Promise.reject(error);
   }
 );
@@ -595,8 +594,8 @@ Yanıtını SADECE şu JSON formatında ver:
 
   // Jobs endpoints (Yeni eklendi)
   jobs: {
-    // İş ilanlarını çek (Admin yetkisi gerekli)
-    scrape: (keyword = '') => api.post('/api/jobs/scrape', { keyword }),
+    // İş ilanlarını çek (Admin yetkisi gerekli) - External Web Scraping
+    scrape: ({ source = 'all', keyword = '' }) => api.post('/api/jobs/scrape', { source, keyword }),
   },
 };
 

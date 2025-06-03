@@ -204,7 +204,7 @@ function VisitorsPage() {
        <Box sx={{ textAlign: 'center', mt: 4 }}>
           <Button
             variant="outlined"
-            onClick={() => navigate('/', { replace: true })}
+            onClick={() => navigate('/dashboard', { replace: true })}
           >
             Ana Sayfaya Git
           </Button>
