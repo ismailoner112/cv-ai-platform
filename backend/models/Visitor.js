@@ -1,4 +1,4 @@
-// backend/models/Visitor.js
+
 const mongoose = require('mongoose');
 
 const visitorSchema = new mongoose.Schema({
