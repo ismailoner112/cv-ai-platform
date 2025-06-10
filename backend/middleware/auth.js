@@ -41,6 +41,14 @@ exports.auth = async (req, res, next) => {
   try {
     // JWT token'ı çerezden al
     const token = req.cookies.token;
+    console.log('🔍 Auth middleware debug:', {
+      hasCookies: !!req.cookies,
+      hasToken: !!token,
+      tokenLength: token ? token.length : 0,
+      cookieNames: Object.keys(req.cookies || {}),
+      requestPath: req.path
+    });
+    
     if (!token) throw new Error(ERROR_MESSAGES.NO_TOKEN);
 
     // Token'ı doğrula

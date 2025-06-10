@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { auth, isAdmin } = require('../middleware/auth');
-const { scrapeJobs } = require('../scrape/scraper'); // Import the consolidated scrapeJobs function
+const { scrapeJobs, testScrape, testJobSite } = require('../scrape/scraper'); // Import test functions
 const Announcement = require('../models/Announcement'); // Import Announcement model
 
 // Test endpoint to check if scraping works
@@ -31,6 +31,59 @@ router.get('/test', auth, isAdmin, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Network test failed',
+      error: error.message
+    });
+  }
+});
+
+// Advanced scraping test endpoint
+router.get('/test-scrape', auth, isAdmin, async (req, res) => {
+  try {
+    console.log('Testing scraper components...');
+    
+    const basicTest = await testScrape();
+    const kariyerTest = await testJobSite('kariyernet');
+    const linkedinTest = await testJobSite('linkedin');
+    
+    res.json({
+      success: true,
+      message: 'Scraping component tests completed',
+      data: {
+        basicScraping: basicTest,
+        kariyernetConnection: kariyerTest,
+        linkedinConnection: linkedinTest
+      }
+    });
+    
+  } catch (error) {
+    console.error('Scraping test failed:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Scraping test failed',
+      error: error.message
+    });
+  }
+});
+
+// Test specific job site connectivity
+router.get('/test-site/:site', auth, isAdmin, async (req, res) => {
+  try {
+    const { site } = req.params;
+    console.log(`Testing ${site} connectivity...`);
+    
+    const testResult = await testJobSite(site);
+    
+    res.json({
+      success: true,
+      message: `${site} test completed`,
+      data: testResult
+    });
+    
+  } catch (error) {
+    console.error(`${req.params.site} test failed:`, error.message);
+    res.status(500).json({
+      success: false,
+      message: `${req.params.site} test failed`,
       error: error.message
     });
   }

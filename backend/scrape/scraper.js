@@ -412,5 +412,83 @@ const scrapeJobs = async ({ source = 'all', keyword = '' }) => {
 // Export the central function
 module.exports = {
   scrapeJobs,
+  
+  // Test function for debugging
+  testScrape: async (testUrl = 'https://httpbin.org/html') => {
+    console.log('🧪 Testing basic scraping functionality...');
+    try {
+      const axiosInstance = createAxiosInstance();
+      const response = await axiosInstance.get(testUrl);
+      const $ = cheerio.load(response.data);
+      
+      return {
+        success: true,
+        status: response.status,
+        title: $('title').text() || 'No title found',
+        bodyLength: $('body').text().length,
+        userAgent: response.config.headers['User-Agent']
+      };
+    } catch (error) {
+      console.error('Test scraping failed:', error.message);
+      return {
+        success: false,
+        error: error.message,
+        status: error.response?.status || 'No response'
+      };
+    }
+  },
+  
+  // Simple job site test
+  testJobSite: async (site = 'kariyernet') => {
+    console.log(`🧪 Testing ${site} connection...`);
+    
+    const testUrls = {
+      kariyernet: 'https://www.kariyer.net/is-ilanlari',
+      linkedin: 'https://www.linkedin.com/jobs/'
+    };
+    
+    const url = testUrls[site];
+    if (!url) return { success: false, error: 'Unknown site' };
+    
+    try {
+      const axiosInstance = createAxiosInstance();
+      console.log(`Testing ${url}...`);
+      
+      const response = await axiosInstance.get(url);
+      const $ = cheerio.load(response.data);
+      
+      // Basic page analysis
+      const title = $('title').text();
+      const bodyText = $('body').text();
+      const hasJobElements = $('.job, .result-card, .list-item, [data-testid="job-card"]').length > 0;
+      
+      // Check for common anti-bot indicators
+      const isBlocked = bodyText.toLowerCase().includes('bot') || 
+                       bodyText.toLowerCase().includes('captcha') ||
+                       bodyText.toLowerCase().includes('blocked') ||
+                       bodyText.toLowerCase().includes('access denied');
+      
+      return {
+        success: true,
+        site,
+        status: response.status,
+        title: title.substring(0, 100),
+        hasJobElements,
+        isBlocked,
+        bodyLength: bodyText.length,
+        responseTime: response.headers['response-time'] || 'N/A'
+      };
+      
+    } catch (error) {
+      console.error(`${site} test failed:`, error.message);
+      return {
+        success: false,
+        site,
+        error: error.message,
+        status: error.response?.status || 'No response',
+        isTimeout: error.code === 'ECONNABORTED'
+      };
+    }
+  }
 };
     

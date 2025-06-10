@@ -596,6 +596,12 @@ Yanıtını SADECE şu JSON formatında ver:
   jobs: {
     // İş ilanlarını çek (Admin yetkisi gerekli) - External Web Scraping
     scrape: ({ source = 'all', keyword = '' }) => api.post('/api/jobs/scrape', { source, keyword }),
+    // Test endpoint for network connectivity
+    test: () => api.get('/api/jobs/test'),
+    // Test scraping components
+    testScrape: () => api.get('/api/jobs/test-scrape'),
+    // Test specific job site
+    testSite: (site) => api.get(`/api/jobs/test-site/${site}`),
   },
 };
 

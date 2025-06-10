@@ -29,6 +29,7 @@ import {
   Alert,
   Chip,
   Pagination,
+  Stack,
 } from '@mui/material'
 import {
   Edit as EditIcon,
@@ -172,6 +173,49 @@ export default function AdminAnnouncementsPage() {
     } finally {
       setDeleteDialogOpen(false)
       setAnnouncementToDelete(null)
+    }
+  }
+
+  // Network ve scraping test fonksiyonu
+  const handleTestNetwork = async () => {
+    setScraping(true)
+    try {
+      console.log('Testing scraping components...')
+      
+      const res = await jobs.testScrape()
+      console.log('Test sonuçları:', res.data)
+      
+      if (res.data.success) {
+        const { data } = res.data
+        let message = 'Test Sonuçları:\n\n'
+        
+        if (data.basicScraping?.success) {
+          message += '✅ Temel Scraping: Başarılı\n'
+        } else {
+          message += '❌ Temel Scraping: Başarısız\n'
+        }
+        
+        if (data.kariyernetConnection?.success) {
+          message += `✅ Kariyer.net: Bağlantı OK (${data.kariyernetConnection.hasJobElements ? 'İş ilanları bulundu' : 'İş ilanları bulunamadı'})\n`
+        } else {
+          message += `❌ Kariyer.net: Bağlantı hatası - ${data.kariyernetConnection?.error}\n`
+        }
+        
+        if (data.linkedinConnection?.success) {
+          message += `✅ LinkedIn: Bağlantı OK (${data.linkedinConnection.hasJobElements ? 'İş ilanları bulundu' : 'İş ilanları bulunamadı'})\n`
+        } else {
+          message += `❌ LinkedIn: Bağlantı hatası - ${data.linkedinConnection?.error}\n`
+        }
+        
+        showNotification(message, 'info')
+      } else {
+        showNotification('Test başarısız: ' + res.data.message, 'error')
+      }
+    } catch (err) {
+      console.error('Test hatası:', err)
+      showNotification('Test sırasında hata oluştu: ' + err.message, 'error')
+    } finally {
+      setScraping(false)
     }
   }
 
@@ -365,8 +409,9 @@ export default function AdminAnnouncementsPage() {
           </Grid>
           
           <Grid item xs={12} md={3}>
-            <Button
-              variant="contained"
+            <Stack direction="row" spacing={1}>
+              <Button
+                variant="contained"
               onClick={handleScrapeJobs}
               disabled={scraping || !scrapeSource || !scrapeKeyword.trim()}
               fullWidth
@@ -381,6 +426,17 @@ export default function AdminAnnouncementsPage() {
             >
               {scraping ? 'İşlem Yapılıyor...' : '🌐 Web Scraping'}
             </Button>
+            
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={handleTestNetwork}
+              disabled={scraping}
+              sx={{ ml: 1 }}
+            >
+              🧪 Test
+            </Button>
+            </Stack>
           </Grid>
         </Grid>
         

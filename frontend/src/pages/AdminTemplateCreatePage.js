@@ -1,20 +1,55 @@
 // src/pages/AdminTemplateCreatePage.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, TextField,
   Button, CircularProgress, Alert
 } from '@mui/material';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCsrf } from '../hooks/useCsrf';
+import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 
 export default function AdminTemplateCreatePage() {
-  const csrfToken = useCsrf();
-  const navigate  = useNavigate();
-  const [title, setTitle]             = useState('');
+  const { token: csrfToken } = useCsrf();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { showNotification } = useNotification();
+  const navigate = useNavigate();
+  
+  const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [file, setFile]               = useState(null);
-  const [loading, setLoading]         = useState(false);
-  const [error, setError]             = useState('');
+  const [file, setFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // Authentication check
+  useEffect(() => {
+    console.log('AdminTemplateCreatePage auth check:', {
+      authLoading,
+      isAuthenticated,
+      userRole: user?.role,
+      csrfToken: !!csrfToken
+    });
+    
+    if (!authLoading && (!isAuthenticated || user?.role !== 'admin')) {
+      showNotification('Bu sayfaya erişim için admin yetkisi gereklidir.', 'error');
+      navigate('/auth');
+    }
+  }, [authLoading, isAuthenticated, user, navigate, showNotification, csrfToken]);
+
+  // Show loading while auth is being checked
+  if (authLoading) {
+    return (
+      <Box sx={{ p: 4, textAlign: 'center' }}>
+        <CircularProgress />
+        <Typography variant="h6" sx={{ mt: 2 }}>Yetki Kontrol Ediliyor...</Typography>
+      </Box>
+    );
+  }
+
+  // Don't render if user is not authenticated or not admin
+  if (!isAuthenticated || user?.role !== 'admin') {
+    return null;
+  }
 
   const handleSubmit = async e => {
     e.preventDefault();
@@ -35,24 +70,31 @@ export default function AdminTemplateCreatePage() {
       return;
     }
 
+    if (!csrfToken) {
+      setError('CSRF token bulunamadı. Lütfen sayfayı yenileyin.');
+      return;
+    }
+
     setLoading(true);
     
     try {
       const form = new FormData();
-      form.append('title',       title.trim());
+      form.append('title', title.trim());
       form.append('description', description);
-      form.append('file',        file);
+      form.append('file', file);
 
       console.log('PDF yükleme başlıyor...', {
         title: title.trim(),
         description,
         fileName: file.name,
         fileSize: file.size,
-        fileType: file.type
+        fileType: file.type,
+        userRole: user?.role,
+        hasCSRF: !!csrfToken
       });
 
       const res = await fetch('/api/gallery', {
-        method:      'POST',
+        method: 'POST',
         credentials: 'include',
         headers: {
           'X-CSRF-Token': csrfToken
@@ -65,14 +107,19 @@ export default function AdminTemplateCreatePage() {
 
       if (res.ok && data.success) {
         console.log('PDF başarıyla yüklendi');
+        showNotification('Şablon başarıyla yüklendi!', 'success');
         navigate('/admin/templates');
       } else {
         console.error('Yükleme hatası:', data);
-        setError(data.message || 'Yükleme başarısız');
+        const errorMessage = data.message || 'Yükleme başarısız';
+        setError(errorMessage);
+        showNotification(errorMessage, 'error');
       }
     } catch (error) {
       console.error('Network hatası:', error);
-      setError('Ağ hatası oluştu. Lütfen tekrar deneyin.');
+      const errorMessage = 'Ağ hatası oluştu. Lütfen tekrar deneyin.';
+      setError(errorMessage);
+      showNotification(errorMessage, 'error');
     } finally {
       setLoading(false);
     }

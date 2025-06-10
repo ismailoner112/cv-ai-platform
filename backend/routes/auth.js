@@ -131,7 +131,7 @@ router.post('/login', async (req, res) => {
             httpOnly: true,
             secure: false,       // prod'da HTTPS kullanıyorsanız true yapın
             sameSite: 'Lax',     // cross-site durumları için 'None' veya 'Strict' / 'Lax' ayarlayın
-            maxAge: 60 * 60 * 1000  // 1 saat (ms cinsinden)
+            maxAge: 24 * 60 * 60 * 1000  // 24 saat (ms cinsinden)
           });
 
             return res.json({ 
@@ -162,7 +162,7 @@ router.post('/login', async (req, res) => {
             httpOnly: true,
             secure: false,       // prod'da HTTPS kullanıyorsanız true yapın
             sameSite: 'Lax',     // cross-site durumları için 'None' veya 'Strict' / 'Lax' ayarlayın
-            maxAge: 60 * 60 * 1000  // 1 saat (ms cinsinden)
+            maxAge: 24 * 60 * 60 * 1000  // 24 saat (ms cinsinden)
           });
     res.json({ 
       success: true, 
