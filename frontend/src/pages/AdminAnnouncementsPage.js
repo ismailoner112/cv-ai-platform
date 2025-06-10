@@ -50,6 +50,7 @@ import {
 } from '@mui/icons-material'
 import { useNavigate, Link } from 'react-router-dom'
 import { announcements, jobs } from '../services/api'
+import { toast } from 'react-toastify'
 
 // Önerilen Anahtar Kelimeler Listesi
 const suggestedKeywords = [
@@ -106,6 +107,9 @@ export default function AdminAnnouncementsPage() {
   const [filterKeyword, setFilterKeyword] = useState('')
   const [filterSource, setFilterSource] = useState('')
   const [filterPublished, setFilterPublished] = useState('') // 'true', 'false', ''
+
+  const [debugLoading, setDebugLoading] = useState(false)
+  const [debugResults, setDebugResults] = useState(null)
 
   const showNotification = (message, severity) => {
     setSnackbarMessage(message)
@@ -176,48 +180,204 @@ export default function AdminAnnouncementsPage() {
     }
   }
 
-  // Network ve scraping test fonksiyonu
-  const handleTestNetwork = async () => {
-    setScraping(true)
+  // Enhanced debug functions with better error handling
+  const handleTestKariyer = async () => {
+    setDebugLoading(true);
+    setDebugResults(null);
     try {
-      console.log('Testing scraping components...')
+      toast.info('🧪 Kariyer.net testi başlatılıyor...');
+      const response = await jobs.testKariyer();
+      console.log('Test Kariyer response:', response.data);
       
-      const res = await jobs.testScrape()
-      console.log('Test sonuçları:', res.data)
-      
-      if (res.data.success) {
-        const { data } = res.data
-        let message = 'Test Sonuçları:\n\n'
-        
-        if (data.basicScraping?.success) {
-          message += '✅ Temel Scraping: Başarılı\n'
-        } else {
-          message += '❌ Temel Scraping: Başarısız\n'
-        }
-        
-        if (data.kariyernetConnection?.success) {
-          message += `✅ Kariyer.net: Bağlantı OK (${data.kariyernetConnection.hasJobElements ? 'İş ilanları bulundu' : 'İş ilanları bulunamadı'})\n`
-        } else {
-          message += `❌ Kariyer.net: Bağlantı hatası - ${data.kariyernetConnection?.error}\n`
-        }
-        
-        if (data.linkedinConnection?.success) {
-          message += `✅ LinkedIn: Bağlantı OK (${data.linkedinConnection.hasJobElements ? 'İş ilanları bulundu' : 'İş ilanları bulunamadı'})\n`
-        } else {
-          message += `❌ LinkedIn: Bağlantı hatası - ${data.linkedinConnection?.error}\n`
-        }
-        
-        showNotification(message, 'info')
+      if (response.data.success) {
+        setDebugResults({
+          type: 'kariyer',
+          success: true,
+          data: response.data.data || response.data,
+          message: response.data.message || 'Kariyer.net testi başarılı'
+        });
+        toast.success(`✅ Kariyer.net: ${response.data.message || 'Test başarılı'}`);
       } else {
-        showNotification('Test başarısız: ' + res.data.message, 'error')
+        setDebugResults({
+          type: 'kariyer',
+          success: false,
+          message: response.data.message || 'Test başarısız'
+        });
+        toast.warning(`⚠️ Kariyer.net: ${response.data.message || 'Test başarısız'}`);
       }
-    } catch (err) {
-      console.error('Test hatası:', err)
-      showNotification('Test sırasında hata oluştu: ' + err.message, 'error')
+    } catch (error) {
+      console.error('Kariyer.net test error:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Bilinmeyen hata';
+      setDebugResults({
+        type: 'kariyer',
+        success: false,
+        message: errorMessage
+      });
+      toast.error(`❌ Kariyer.net test hatası: ${errorMessage}`);
     } finally {
-      setScraping(false)
+      setDebugLoading(false);
     }
-  }
+  };
+
+  const handleTestLinkedin = async () => {
+    setDebugLoading(true);
+    setDebugResults(null);
+    try {
+      toast.info('🧪 LinkedIn testi başlatılıyor...');
+      const response = await jobs.testLinkedin();
+      console.log('Test LinkedIn response:', response.data);
+      
+      if (response.data.success) {
+        setDebugResults({
+          type: 'linkedin',
+          success: true,
+          data: response.data.data || response.data,
+          message: response.data.message || 'LinkedIn testi başarılı'
+        });
+        toast.success(`✅ LinkedIn: ${response.data.message || 'Test başarılı'}`);
+      } else {
+        setDebugResults({
+          type: 'linkedin',
+          success: false,
+          message: response.data.message || 'Test başarısız'
+        });
+        toast.warning(`⚠️ LinkedIn: ${response.data.message || 'Test başarısız'}`);
+      }
+    } catch (error) {
+      console.error('LinkedIn test error:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Bilinmeyen hata';
+      setDebugResults({
+        type: 'linkedin',
+        success: false,
+        message: errorMessage
+      });
+      toast.error(`❌ LinkedIn test hatası: ${errorMessage}`);
+    } finally {
+      setDebugLoading(false);
+    }
+  };
+
+  const handleFullScrapeTest = async () => {
+    setDebugLoading(true);
+    setDebugResults(null);
+    try {
+      toast.info('🧪 Full scrape testi başlatılıyor...');
+      const response = await jobs.testFullScrape();
+      console.log('Full scrape test response:', response.data);
+      
+      if (response.data.success) {
+        setDebugResults({
+          type: 'fullscrape',
+          success: true,
+          data: response.data.data || response.data,
+          message: response.data.message || 'Full scrape testi başarılı'
+        });
+        toast.success(`✅ Full Scrape: ${response.data.message || 'Test başarılı'}`);
+      } else {
+        setDebugResults({
+          type: 'fullscrape',
+          success: false,
+          message: response.data.message || 'Test başarısız'
+        });
+        toast.warning(`⚠️ Full Scrape: ${response.data.message || 'Test başarısız'}`);
+      }
+    } catch (error) {
+      console.error('Full scrape test error:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Bilinmeyen hata';
+      setDebugResults({
+        type: 'fullscrape',
+        success: false,
+        message: errorMessage
+      });
+      toast.error(`❌ Full scrape test hatası: ${errorMessage}`);
+    } finally {
+      setDebugLoading(false);
+    }
+  };
+
+  const handleQuickScrape = async () => {
+    setDebugLoading(true);
+    setDebugResults(null);
+    try {
+      const searchTerm = 'react developer';
+      toast.info(`🧪 Quick scrape başlatılıyor: "${searchTerm}"...`);
+      const response = await jobs.quickScrape(searchTerm);
+      console.log('Quick scrape response:', response.data);
+      
+      if (response.data.success) {
+        setDebugResults({
+          type: 'quickscrape',
+          success: true,
+          data: response.data.data || response.data,
+          message: response.data.message || 'Quick scrape başarılı'
+        });
+        toast.success(`✅ Quick Scrape: ${response.data.message || 'Test başarılı'}`);
+        
+        // Auto-refresh announcements if jobs were found
+        if (response.data.data?.jobs?.length > 0) {
+          setTimeout(() => {
+            fetchAnns();
+          }, 2000);
+        }
+      } else {
+        setDebugResults({
+          type: 'quickscrape',
+          success: false,
+          message: response.data.message || 'Test başarısız'
+        });
+        toast.warning(`⚠️ Quick Scrape: ${response.data.message || 'Test başarısız'}`);
+      }
+    } catch (error) {
+      console.error('Quick scrape error:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Bilinmeyen hata';
+      setDebugResults({
+        type: 'quickscrape',
+        success: false,
+        message: errorMessage
+      });
+      toast.error(`❌ Quick scrape hatası: ${errorMessage}`);
+    } finally {
+      setDebugLoading(false);
+    }
+  };
+
+  const handleScraperInfo = async () => {
+    setDebugLoading(true);
+    setDebugResults(null);
+    try {
+      toast.info('🧪 Scraper bilgileri alınıyor...');
+      const response = await jobs.getScraperInfo();
+      console.log('Scraper info response:', response.data);
+      
+      if (response.data.success) {
+        setDebugResults({
+          type: 'scraperinfo',
+          success: true,
+          data: response.data.data || response.data,
+          message: 'Scraper bilgileri başarıyla alındı'
+        });
+        toast.success('✅ Scraper bilgileri alındı');
+      } else {
+        setDebugResults({
+          type: 'scraperinfo',
+          success: false,
+          message: response.data.message || 'Bilgiler alınamadı'
+        });
+        toast.warning(`⚠️ Scraper Info: ${response.data.message || 'Bilgiler alınamadı'}`);
+      }
+    } catch (error) {
+      console.error('Scraper info error:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Bilinmeyen hata';
+      setDebugResults({
+        type: 'scraperinfo',
+        success: false,
+        message: errorMessage
+      });
+      toast.error(`❌ Scraper info hatası: ${errorMessage}`);
+    } finally {
+      setDebugLoading(false);
+    }
+  };
 
   // İş ilanlarını çeken fonksiyon (External Web Scraping)
   const handleScrapeJobs = async () => {
@@ -430,7 +590,7 @@ export default function AdminAnnouncementsPage() {
             <Button
               variant="outlined"
               size="small"
-              onClick={handleTestNetwork}
+              onClick={handleTestKariyer}
               disabled={scraping}
               sx={{ ml: 1 }}
             >
@@ -439,39 +599,67 @@ export default function AdminAnnouncementsPage() {
             </Stack>
           </Grid>
         </Grid>
-        
-        {scraping && (
-          <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <CircularProgress size={16} sx={{ mr: 1 }} />
-              <Typography variant="body2" color="text.secondary">
-                "{scrapeKeyword}" anahtar kelimesi için {scrapeSource === 'all' ? 'tüm kaynaklardan' : scrapeSource} sitesinden ilanlar çekiliyor...
-              </Typography>
-            </Box>
-            
-            {/* Progress Indicator */}
-            <Box sx={{ 
-              p: 2, 
-              bgcolor: 'primary.main', 
-              color: 'white', 
-              borderRadius: 1, 
-              textAlign: 'center' 
-            }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                🔍 Web Scraping İşlemi Devam Ediyor
-              </Typography>
-              <Typography variant="caption">
-                {scrapeSource === 'all' 
-                  ? 'Kariyer.net ve LinkedIn sitelerinden veri çekiliyor...' 
-                  : `${scrapeSource} sitesinden veri çekiliyor...`}
-              </Typography>
-              <br />
-              <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                Bu işlem 10-30 saniye sürebilir. Lütfen bekleyiniz...
-              </Typography>
-            </Box>
-          </Box>
-        )}
+
+        {/* Enhanced Debug Panel */}
+        <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+          <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main' }}>
+            🔧 Gelişmiş Debug Araçları
+          </Typography>
+          <Grid container spacing={1}>
+            <Grid item xs={6} sm={3}>
+              <Button
+                variant="outlined"
+                size="small"
+                fullWidth
+                                 onClick={handleTestLinkedin}
+                disabled={scraping}
+                startIcon={scraping ? <CircularProgress size={16} /> : null}
+                sx={{ fontSize: '0.7rem' }}
+              >
+                💼 Test LinkedIn
+              </Button>
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <Button
+                variant="outlined"
+                size="small"
+                fullWidth
+                onClick={handleFullScrapeTest}
+                disabled={scraping}
+                startIcon={scraping ? <CircularProgress size={16} /> : null}
+                sx={{ fontSize: '0.7rem' }}
+              >
+                🚀 Full Test
+              </Button>
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <Button
+                variant="outlined"
+                size="small"
+                fullWidth
+                onClick={handleQuickScrape}
+                disabled={scraping}
+                startIcon={scraping ? <CircularProgress size={16} /> : null}
+                sx={{ fontSize: '0.7rem' }}
+              >
+                ⚡ Quick Scrape
+              </Button>
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <Button
+                variant="outlined"
+                size="small"
+                fullWidth
+                onClick={handleScraperInfo}
+                disabled={scraping}
+                startIcon={scraping ? <CircularProgress size={16} /> : null}
+                sx={{ fontSize: '0.7rem' }}
+              >
+                Scraper Info
+              </Button>
+            </Grid>
+          </Grid>
+        </Box>
       </Paper>
 
       {/* Duyuru Listesi ve Filtreleme */}

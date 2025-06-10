@@ -34,7 +34,8 @@ const drawerWidth = 260
 
 const menuItems = [
   { text: 'Ana Sayfa', icon: <HomeIcon />, path: '/dashboard' },
-  { text: 'İş İlanları', icon: <WorkIcon />, path: '/announcements' },
+  { text: 'Duyurular', icon: <WorkIcon />, path: '/announcements' },
+  { text: 'İş İlanları', icon: <WorkIcon />, path: '/jobs' },
   { text: 'Sohbet', icon: <ChatIcon />, path: '/chat' },
   { text: 'Galeri', icon: <ImageIcon />, path: '/gallery' },
   { text: 'Analiz', icon: <AnalyticsIcon />, path: '/analysis' },

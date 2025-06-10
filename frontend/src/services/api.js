@@ -592,19 +592,109 @@ Yanıtını SADECE şu JSON formatında ver:
     removeFavorite: (id) => api.delete(`/api/users/favorites/${id}`),
   },
 
-  // Jobs endpoints (Yeni eklendi)
+  // Jobs endpoints (Enhanced Scraper v2.0)
   jobs: {
-    // İş ilanlarını çek (Admin yetkisi gerekli) - External Web Scraping
-    scrape: ({ source = 'all', keyword = '' }) => api.post('/api/jobs/scrape', { source, keyword }),
-    // Test endpoint for network connectivity
+    // İş ilanlarını çek (Admin yetkisi gerekli) - Enhanced Web Scraping
+    scrape: (data) => api.post('/api/jobs/scrape', data),
+    
+    // Enhanced Debug Endpoints
     test: () => api.get('/api/jobs/test'),
-    // Test scraping components
+    testKariyer: () => api.get('/api/jobs/test-kariyer'),
+    testLinkedIn: () => api.get('/api/jobs/test-linkedin'),
+    testFullScrape: () => api.get('/api/jobs/test-full'),
+    quickScrape: (term) => api.get(`/api/jobs/quick-scrape/${encodeURIComponent(term)}`),
+    scraperInfo: () => api.get('/api/jobs/scraper-info'),
+    
+    // Legacy endpoints (for compatibility)
     testScrape: () => api.get('/api/jobs/test-scrape'),
-    // Test specific job site
     testSite: (site) => api.get(`/api/jobs/test-site/${site}`),
+    
+    // Job management endpoints
+    list: (params = {}) => api.get('/api/jobs', { params }),
+    getOne: (id) => api.get(`/api/jobs/${id}`),
+    delete: (id) => api.delete(`/api/jobs/${id}`),
   },
 };
 
 // Export the API instance and endpoints
 export const { auth, analysis, chat, announcements, gallery, visitors, users, jobs } = endpoints;
 export default api;
+
+// Enhanced Jobs API
+export const jobsAPI = {
+  // Admin scraping functions
+  scrapeJobs: (data) => api.post('/jobs/scrape', data),
+  testKariyer: () => api.get('/jobs/test-kariyer'),
+  testLinkedin: () => api.get('/jobs/test-linkedin'),
+  testFullScrape: () => api.get('/jobs/test-full'),
+  quickScrape: (searchTerm) => api.get(`/jobs/quick-scrape/${searchTerm}`),
+  getScraperInfo: () => api.get('/jobs/scraper-info'),
+  
+  // User-facing job search functions
+  searchJobs: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/jobs/search?${queryString}`);
+  },
+  
+  getJobsByKeyword: (keyword, options = {}) => {
+    const params = {
+      keyword,
+      page: options.page || 1,
+      limit: options.limit || 10,
+      sortBy: options.sortBy || 'publishDate',
+      ...options
+    };
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/jobs/search?${queryString}`);
+  },
+  
+  getPopularKeywords: () => api.get('/jobs/keywords'),
+  
+  getJobCategories: () => api.get('/jobs/categories'),
+  
+  getRecentJobs: (limit = 20) => api.get(`/jobs/recent?limit=${limit}`),
+  
+  getJobStats: () => api.get('/jobs/stats'),
+  
+  // Advanced search with multiple filters
+  advancedSearch: (filters) => {
+    const queryString = new URLSearchParams(filters).toString();
+    return api.get(`/jobs/search?${queryString}`);
+  },
+  
+  // Get jobs by source
+  getJobsBySource: (source, options = {}) => {
+    const params = {
+      source,
+      page: options.page || 1,
+      limit: options.limit || 10,
+      sortBy: options.sortBy || 'publishDate'
+    };
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/jobs/search?${queryString}`);
+  },
+  
+  // Get jobs by location
+  getJobsByLocation: (location, options = {}) => {
+    const params = {
+      location,
+      page: options.page || 1,
+      limit: options.limit || 10,
+      sortBy: options.sortBy || 'publishDate'
+    };
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/jobs/search?${queryString}`);
+  },
+  
+  // Get jobs by company
+  getJobsByCompany: (company, options = {}) => {
+    const params = {
+      company,
+      page: options.page || 1,
+      limit: options.limit || 10,
+      sortBy: options.sortBy || 'publishDate'
+    };
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/jobs/search?${queryString}`);
+  }
+};

@@ -22,6 +22,7 @@ import ChatPage from './pages/ChatPage'; // Import the new ChatPage component
 import AnnouncementsPage from './pages/AnnouncementsPage'; // Import the AnnouncementsPage component
 import GalleryPages from './pages/GalleryPages'; // Import the GalleryPages component
 import VisitorsPage from './pages/VisitorsPage'; // Import the VisitorsPage component
+import JobsPage from './pages/JobsPage'; // Import the JobsPage component
 // Import admin pages
 import AdminAnnouncementsPage from './pages/AdminAnnouncementsPage';
 import AdminAnnouncementsCreatePage from './pages/AdminAnnouncementsCreatePage';
@@ -64,6 +65,7 @@ function App() {
                 <Route path="/dashboard" element={<HomePage />} />
                 <Route path="/analysis" element={<AnalysisPage />} />
                 <Route path="/announcements" element={<AnnouncementsPage />} />
+                <Route path="/jobs" element={<JobsPage />} />
                 <Route path="/chat" element={<ChatPage />} />
                 <Route path="/gallery" element={<GalleryPages />} />
 

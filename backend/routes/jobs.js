@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const { scrapeJobs, testScrapeKariyer, testScrapeLinkedIn, testFullScrape, getScrapeInfo } = require('../scrape/scraper');
+const Announcement = require('../models/Announcement');
 const { auth, isAdmin } = require('../middleware/auth');
-const { scrapeJobs, testScrape, testJobSite } = require('../scrape/scraper'); // Import test functions
-const Announcement = require('../models/Announcement'); // Import Announcement model
 
 // Test endpoint to check if scraping works
 router.get('/test', auth, isAdmin, async (req, res) => {
@@ -36,120 +36,480 @@ router.get('/test', auth, isAdmin, async (req, res) => {
   }
 });
 
-// Advanced scraping test endpoint
-router.get('/test-scrape', auth, isAdmin, async (req, res) => {
+// Enhanced main scraping endpoint (Admin only)
+router.post('/scrape', auth, isAdmin, async (req, res) => {
+  console.log('🚀 Manual scraping başlatıldı');
+  
   try {
-    console.log('Testing scraper components...');
+    const { searchTerm = 'yazılım mühendisi', limit = 10 } = req.body;
     
-    const basicTest = await testScrape();
-    const kariyerTest = await testJobSite('kariyernet');
-    const linkedinTest = await testJobSite('linkedin');
+    console.log(`📋 Scraping parametreleri: "${searchTerm}", limit: ${limit}`);
+    
+    // Ana scraping fonksiyonunu çağır
+    const result = await scrapeJobs(searchTerm, parseInt(limit));
     
     res.json({
-      success: true,
-      message: 'Scraping component tests completed',
+      success: result.success,
+      message: result.message,
       data: {
-        basicScraping: basicTest,
-        kariyernetConnection: kariyerTest,
-        linkedinConnection: linkedinTest
+        jobs: result.jobs,
+        sources: result.sources,
+        total: result.total,
+        database: result.database,
+        keyword: result.keyword,
+        scrapedAt: result.scrapedAt
       }
     });
     
   } catch (error) {
-    console.error('Scraping test failed:', error.message);
+    console.error('❌ Manual scraping error:', error);
     res.status(500).json({
       success: false,
-      message: 'Scraping test failed',
+      message: 'Scraping işlemi başarısız',
       error: error.message
     });
   }
 });
 
-// Test specific job site connectivity
-router.get('/test-site/:site', auth, isAdmin, async (req, res) => {
+// Debug endpoints (Admin only)
+router.get('/test-kariyer', auth, isAdmin, async (req, res) => {
+  console.log('🧪 Kariyer.net test başlatıldı');
+  
   try {
-    const { site } = req.params;
-    console.log(`Testing ${site} connectivity...`);
-    
-    const testResult = await testJobSite(site);
-    
+    const result = await testScrapeKariyer();
+    res.json(result);
+  } catch (error) {
+    console.error('❌ Kariyer.net test error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Kariyer.net test başarısız',
+      error: error.message
+    });
+  }
+});
+
+router.get('/test-linkedin', auth, isAdmin, async (req, res) => {
+  console.log('🧪 LinkedIn test başlatıldı');
+  
+  try {
+    const result = await testScrapeLinkedIn();
+    res.json(result);
+  } catch (error) {
+    console.error('❌ LinkedIn test error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'LinkedIn test başarısız',
+      error: error.message
+    });
+  }
+});
+
+router.get('/test-full', auth, isAdmin, async (req, res) => {
+  console.log('🧪 Full scrape test başlatıldı');
+  
+  try {
+    const result = await testFullScrape();
+    res.json(result);
+  } catch (error) {
+    console.error('❌ Full scrape test error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Full scrape test başarısız',
+      error: error.message
+    });
+  }
+});
+
+router.get('/quick-scrape/:term', auth, isAdmin, async (req, res) => {
+  console.log('⚡ Quick scrape başlatıldı');
+  
+  try {
+    const { term } = req.params;
+    const result = await scrapeJobs(term, 5);
+    res.json(result);
+  } catch (error) {
+    console.error('❌ Quick scrape error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Quick scrape başarısız',
+      error: error.message
+    });
+  }
+});
+
+router.get('/scraper-info', auth, isAdmin, async (req, res) => {
+  try {
+    const info = getScrapeInfo();
     res.json({
       success: true,
-      message: `${site} test completed`,
-      data: testResult
+      data: info
     });
-    
   } catch (error) {
-    console.error(`${req.params.site} test failed:`, error.message);
+    console.error('❌ Scraper info error:', error);
     res.status(500).json({
       success: false,
-      message: `${req.params.site} test failed`,
+      message: 'Scraper bilgileri alınamadı',
       error: error.message
     });
   }
 });
 
-// İş ilanlarını çekme ve kaydetme rotası (Admin yetkisi gerekli) - EXTERNAL WEB SCRAPING
-// POST /api/jobs/scrape
-// Body: { source: 'kariyernet' | 'linkedin' | 'all', keyword?: string }
-router.post('/scrape', auth, isAdmin, async (req, res) => {
-  const { source = 'all', keyword = '' } = req.body; // Default değerler eklendi
+// PUBLIC USER ENDPOINTS - No authentication required
 
-  if (!source || !['kariyernet', 'linkedin', 'all'].includes(source)) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'Geçerli bir kaynak belirtmelisiniz (kariyernet, linkedin veya all).' 
-    });
-  }
-
-  if (!keyword || keyword.trim() === '') {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'Arama yapmak için anahtar kelime zorunludur.' 
-    });
-  }
-
+// Kullanıcılar için: Anahtar kelime bazında iş ilanlarını getir
+router.get('/search', async (req, res) => {
   try {
-    console.log(`${source} kaynağından external web scraping başlatılıyor... Anahtar kelime: ${keyword}`);
+    const { 
+      keyword, 
+      page = 1, 
+      limit = 10, 
+      source,
+      location,
+      company,
+      sortBy = 'publishDate'
+    } = req.query;
 
-    // Call the actual web scraping function
-    const scrapingResult = await scrapeJobs({ source, keyword: keyword.trim() });
-    
-    const { scrapedJobs, savedResults, errors } = scrapingResult;
+    const filter = { isPublished: true };
+    const sort = {};
 
-    // Calculate statistics from actual scraping results
-    const stats = {
-      scrapedCount: scrapedJobs.length,
-      savedCount: savedResults ? savedResults.filter(r => r && r.success).length : 0,
-      createdCount: savedResults ? savedResults.filter(r => r && r.status === 'created').length : 0,
-      updatedCount: savedResults ? savedResults.filter(r => r && r.status === 'updated').length : 0,
-      errorCount: errors ? errors.length : 0
-    };
+    // Anahtar kelime araması
+    if (keyword) {
+      filter.$or = [
+        { keywords: { $in: [new RegExp(keyword, 'i')] } },
+        { title: { $regex: keyword, $options: 'i' } },
+        { description: { $regex: keyword, $options: 'i' } },
+        { company: { $regex: keyword, $options: 'i' } }
+      ];
+    }
 
-    const response = {
+    // Filtreler
+    if (source) filter.source = source;
+    if (location) filter.location = { $regex: location, $options: 'i' };
+    if (company) filter.company = { $regex: company, $options: 'i' };
+
+    // Sıralama
+    switch (sortBy) {
+      case 'publishDate':
+        sort.publishDate = -1;
+        break;
+      case 'title':
+        sort.title = 1;
+        break;
+      case 'company':
+        sort.company = 1;
+        break;
+      case 'views':
+        sort.views = -1;
+        break;
+      default:
+        sort.publishDate = -1;
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const jobs = await Announcement.find(filter)
+      .sort(sort)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .select('title company location description url source publishDate keywords views favoriteCount');
+
+    const total = await Announcement.countDocuments(filter);
+
+    res.json({
       success: true,
-      message: `${source} kaynağından ${stats.scrapedCount} ilan bulundu. ${stats.createdCount} yeni eklendi, ${stats.updatedCount} güncellendi.`,
-      data: {
-        scrapedCount: stats.scrapedCount,
-        savedCount: stats.savedCount,
-        createdCount: stats.createdCount,
-        updatedCount: stats.updatedCount,
-        errorCount: stats.errorCount,
-        results: scrapedJobs.slice(0, 20) // Return first 20 for display
+      data: jobs,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
       },
-      errors: errors || []
-    };
-
-    console.log(`📊 External Web Scraping: ${stats.scrapedCount} ilanlar bulundu, ${stats.createdCount} yeni, ${stats.updatedCount} güncellendi`);
-
-    res.json(response);
+      filters: {
+        keyword: keyword || null,
+        source: source || null,
+        location: location || null,
+        company: company || null,
+        sortBy
+      }
+    });
 
   } catch (error) {
-    console.error(`${source} external web scraping hatası:`, error.message);
-    res.status(500).json({ 
-      success: false, 
-      message: `${source} kaynağından web scraping sırasında bir hata oluştu: ${error.message}`,
-      error: error.message 
+    console.error('İş ilanları arama hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'İş ilanları aranamadı',
+      error: error.message
+    });
+  }
+});
+
+// Kullanıcılar için: Popüler anahtar kelimeleri getir
+router.get('/keywords', async (req, res) => {
+  try {
+    const keywordStats = await Announcement.aggregate([
+      { $match: { isPublished: true } },
+      { $unwind: '$keywords' },
+      { $group: { 
+        _id: '$keywords', 
+        count: { $sum: 1 },
+        lastUsed: { $max: '$publishDate' }
+      }},
+      { $sort: { count: -1 } },
+      { $limit: 50 }
+    ]);
+
+    const trendingKeywords = await Announcement.aggregate([
+      { $match: { 
+        isPublished: true,
+        publishDate: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } // Son 7 gün
+      }},
+      { $unwind: '$keywords' },
+      { $group: { 
+        _id: '$keywords', 
+        count: { $sum: 1 }
+      }},
+      { $sort: { count: -1 } },
+      { $limit: 20 }
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        popular: keywordStats.map(item => ({
+          keyword: item._id,
+          count: item.count,
+          lastUsed: item.lastUsed
+        })),
+        trending: trendingKeywords.map(item => ({
+          keyword: item._id,
+          count: item.count
+        }))
+      }
+    });
+
+  } catch (error) {
+    console.error('Anahtar kelime istatistikleri hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Anahtar kelime istatistikleri alınamadı',
+      error: error.message
+    });
+  }
+});
+
+// Kullanıcılar için: İlan kategorilerini getir (source bazında)
+router.get('/categories', async (req, res) => {
+  try {
+    const sourceStats = await Announcement.aggregate([
+      { $match: { isPublished: true } },
+      { $group: { 
+        _id: '$source', 
+        count: { $sum: 1 },
+        latestJob: { $max: '$publishDate' }
+      }},
+      { $sort: { count: -1 } }
+    ]);
+
+    const locationStats = await Announcement.aggregate([
+      { $match: { isPublished: true, location: { $exists: true, $ne: '' } } },
+      { $group: { 
+        _id: '$location', 
+        count: { $sum: 1 }
+      }},
+      { $sort: { count: -1 } },
+      { $limit: 20 }
+    ]);
+
+    const companyStats = await Announcement.aggregate([
+      { $match: { isPublished: true } },
+      { $group: { 
+        _id: '$company', 
+        count: { $sum: 1 }
+      }},
+      { $sort: { count: -1 } },
+      { $limit: 30 }
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        sources: sourceStats.map(item => ({
+          source: item._id,
+          count: item.count,
+          latestJob: item.latestJob
+        })),
+        locations: locationStats.map(item => ({
+          location: item._id,
+          count: item.count
+        })),
+        companies: companyStats.map(item => ({
+          company: item._id,
+          count: item.count
+        }))
+      }
+    });
+
+  } catch (error) {
+    console.error('Kategori istatistikleri hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Kategori istatistikleri alınamadı',
+      error: error.message
+    });
+  }
+});
+
+// Kullanıcılar için: Son eklenen ilanları getir
+router.get('/recent', async (req, res) => {
+  try {
+    const { limit = 20 } = req.query;
+
+    const recentJobs = await Announcement.find({ isPublished: true })
+      .sort({ publishDate: -1 })
+      .limit(parseInt(limit))
+      .select('title company location description url source publishDate keywords views')
+      .populate('favorites', 'length');
+
+    res.json({
+      success: true,
+      data: recentJobs,
+      total: recentJobs.length
+    });
+
+  } catch (error) {
+    console.error('Son ilanları getirme hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Son ilanlar getirilemedi',
+      error: error.message
+    });
+  }
+});
+
+// Kullanıcılar için: İstatistikler
+router.get('/stats', async (req, res) => {
+  try {
+    const totalJobs = await Announcement.countDocuments({ isPublished: true });
+    const totalCompanies = await Announcement.distinct('company', { isPublished: true });
+    const totalSources = await Announcement.distinct('source', { isPublished: true });
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayJobs = await Announcement.countDocuments({ 
+      isPublished: true,
+      publishDate: { $gte: today }
+    });
+
+    const lastWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const weeklyJobs = await Announcement.countDocuments({ 
+      isPublished: true,
+      publishDate: { $gte: lastWeek }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        totalJobs,
+        totalCompanies: totalCompanies.length,
+        totalSources: totalSources.length,
+        todayJobs,
+        weeklyJobs,
+        lastUpdated: new Date()
+      }
+    });
+
+  } catch (error) {
+    console.error('İstatistik hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'İstatistikler alınamadı',
+      error: error.message
+    });
+  }
+});
+
+// İş ilanlarını listele
+router.get('/', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const jobs = await Announcement.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Announcement.countDocuments();
+
+    res.json({
+      success: true,
+      data: jobs,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('İş ilanları getirme hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'İş ilanları getirilemedi',
+      error: error.message
+    });
+  }
+});
+
+// Tek iş ilanı getir
+router.get('/:id', async (req, res) => {
+  try {
+    const job = await Announcement.findById(req.params.id);
+    
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: 'İş ilanı bulunamadı'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: job
+    });
+  } catch (error) {
+    console.error('İş ilanı getirme hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'İş ilanı getirilemedi',
+      error: error.message
+    });
+  }
+});
+
+// İş ilanı sil (Admin)
+router.delete('/:id', auth, isAdmin, async (req, res) => {
+  try {
+    const job = await Announcement.findByIdAndDelete(req.params.id);
+    
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: 'İş ilanı bulunamadı'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'İş ilanı silindi'
+    });
+  } catch (error) {
+    console.error('İş ilanı silme hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'İş ilanı silinemedi',
+      error: error.message
     });
   }
 });
