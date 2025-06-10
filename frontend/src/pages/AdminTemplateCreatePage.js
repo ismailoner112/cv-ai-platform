@@ -43,9 +43,6 @@ export default function AdminTemplateCreatePage() {
       form.append('description', description);
       form.append('file',        file);
 
-      // JWT token'ı localStorage'dan al
-      const token = localStorage.getItem('token');
-
       console.log('PDF yükleme başlıyor...', {
         title: title.trim(),
         description,
@@ -58,8 +55,7 @@ export default function AdminTemplateCreatePage() {
         method:      'POST',
         credentials: 'include',
         headers: {
-         'Authorization': `Bearer ${token}`,
-          'X-CSRF-Token':    csrfToken
+          'X-CSRF-Token': csrfToken
         },
         body: form
       });
