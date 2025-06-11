@@ -159,6 +159,13 @@ router.get('/scraper-info', auth, isAdmin, async (req, res) => {
 // Kullanıcılar için: Anahtar kelime bazında iş ilanlarını getir
 router.get('/search', async (req, res) => {
   try {
+    console.log('🔍 /search endpoint called with query:', req.query);
+    
+    // Quick DB check
+    const totalAnnouncements = await Announcement.countDocuments();
+    const publishedAnnouncements = await Announcement.countDocuments({ isPublished: true });
+    console.log(`📊 Quick DB check: Total: ${totalAnnouncements}, Published: ${publishedAnnouncements}`);
+    
     const { 
       keyword, 
       page = 1, 
@@ -175,6 +182,7 @@ router.get('/search', async (req, res) => {
     // Anahtar kelime araması
     if (keyword) {
       filter.$or = [
+        { searchTerm: { $regex: keyword, $options: 'i' } },
         { keywords: { $in: [new RegExp(keyword, 'i')] } },
         { title: { $regex: keyword, $options: 'i' } },
         { description: { $regex: keyword, $options: 'i' } },
@@ -207,6 +215,9 @@ router.get('/search', async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
+    console.log('📊 Filter used:', filter);
+    console.log('📊 Sort used:', sort);
+
     const jobs = await Announcement.find(filter)
       .sort(sort)
       .skip(skip)
@@ -214,6 +225,8 @@ router.get('/search', async (req, res) => {
       .select('title company location description url source publishDate keywords views favoriteCount');
 
     const total = await Announcement.countDocuments(filter);
+
+    console.log(`✅ Found ${jobs.length} jobs out of ${total} total`);
 
     res.json({
       success: true,
@@ -238,6 +251,65 @@ router.get('/search', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'İş ilanları aranamadı',
+      error: error.message
+    });
+  }
+});
+
+// Kullanıcılar için: Scraping gruplarını getir (searchTerm bazında)
+router.get('/scraping-groups', async (req, res) => {
+  try {
+    console.log('🔍 /scraping-groups endpoint called');
+    
+    // First check total announcements
+    const totalAnnouncements = await Announcement.countDocuments();
+    const publishedAnnouncements = await Announcement.countDocuments({ isPublished: true });
+    const scrapedAnnouncements = await Announcement.countDocuments({ scraped: true });
+    const withSearchTerm = await Announcement.countDocuments({ 
+      searchTerm: { $exists: true, $ne: null, $ne: '' } 
+    });
+    
+    console.log(`📊 DB Stats: Total: ${totalAnnouncements}, Published: ${publishedAnnouncements}, Scraped: ${scrapedAnnouncements}, WithSearchTerm: ${withSearchTerm}`);
+    
+    const scrapingGroups = await Announcement.aggregate([
+      { 
+        $match: { 
+          isPublished: true, 
+          scraped: true,
+          searchTerm: { $exists: true, $ne: null, $ne: '' }
+        } 
+      },
+      { 
+        $group: { 
+          _id: '$searchTerm', 
+          count: { $sum: 1 },
+          lastScraped: { $max: '$lastScrapedAt' },
+          latestJob: { $max: '$publishDate' },
+          sources: { $addToSet: '$source' }
+        }
+      },
+      { $sort: { lastScraped: -1, count: -1 } }
+    ]);
+
+    console.log(`✅ Found ${scrapingGroups.length} scraping groups`);
+
+    res.json({
+      success: true,
+      data: scrapingGroups.map(item => ({
+        searchTerm: item._id,
+        title: item._id,
+        count: item.count,
+        lastScraped: item.lastScraped,
+        latestJob: item.latestJob,
+        sources: item.sources
+      }))
+    });
+
+  } catch (error) {
+    console.error('Scraping grupları hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Scraping grupları alınamadı',
       error: error.message
     });
   }

@@ -158,7 +158,7 @@ app.use('/api/announcements', auth, announcementsRouter);
 app.use('/api/visitors', auth, visitorsRouter);
 app.use('/api/gallery', galleryRouter);
 app.use('/api/users', auth, isAdmin, usersRouter);
-app.use('/api/jobs', auth, isAdmin, jobsRouter);
+app.use('/api/jobs', jobsRouter);
 console.log('TRACE: After mounting other protected routes'); // TRACE 12 Updated
 
 // Sitemap rotası

@@ -7,29 +7,20 @@ import {
   CardContent,
   Chip,
   Box,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Pagination,
   Button,
   CircularProgress,
   Alert,
-  Autocomplete,
   Stack,
   IconButton,
   Link
 } from '@mui/material';
 import {
-  Search as SearchIcon,
   Work as WorkIcon,
   LocationOn as LocationIcon,
   Business as BusinessIcon,
   AccessTime as TimeIcon,
-  Visibility as ViewIcon,
-  Launch as LaunchIcon,
-  TrendingUp as TrendingIcon
+  Launch as LaunchIcon
 } from '@mui/icons-material';
 import { jobsAPI } from '../services/api';
 import { toast } from 'react-toastify';
@@ -39,17 +30,9 @@ import { tr } from 'date-fns/locale';
 const JobsPage = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [searchLoading, setSearchLoading] = useState(false);
   const [stats, setStats] = useState({});
-  const [keywords, setKeywords] = useState({ popular: [], trending: [] });
-  const [categories, setCategories] = useState({ sources: [], locations: [], companies: [] });
-  
-  // Search and filter states
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSource, setSelectedSource] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState('');
-  const [selectedCompany, setSelectedCompany] = useState('');
-  const [sortBy, setSortBy] = useState('publishDate');
+  const [scrapingGroups, setScrapingGroups] = useState([]);
+  const [selectedGroup, setSelectedGroup] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState({});
   
@@ -57,112 +40,86 @@ const JobsPage = () => {
 
   // Load initial data
   useEffect(() => {
-    loadInitialData();
-  }, []);
+    loadJobs();
+    loadStats();
+    loadScrapingGroups();
+  }, [currentPage, selectedGroup]);
 
-  // Load jobs when filters change
-  useEffect(() => {
-    if (searchTerm || selectedSource || selectedLocation || selectedCompany) {
-      searchJobs();
-    } else {
-      loadRecentJobs();
+  const loadStats = async () => {
+    try {
+      const statsRes = await jobsAPI.getJobStats();
+      if (statsRes.data.success) setStats(statsRes.data.data);
+    } catch (error) {
+      console.error('İstatistik yükleme hatası:', error);
     }
-  }, [searchTerm, selectedSource, selectedLocation, selectedCompany, sortBy, currentPage]);
+  };
 
-  const loadInitialData = async () => {
+  const loadScrapingGroups = async () => {
+    try {
+      console.log('🔍 Scraping grupları yükleniyor...');
+      const response = await jobsAPI.getScrapingGroups();
+      console.log('📊 Scraping grupları yanıtı:', response.data);
+      if (response.data.success) {
+        setScrapingGroups(response.data.data);
+        console.log('✅ Scraping grupları yüklendi:', response.data.data.length, 'grup');
+      } else {
+        console.log('❌ Scraping grupları başarısız:', response.data.message);
+      }
+    } catch (error) {
+      console.error('❌ Scraping grupları yükleme hatası:', error);
+      console.error('❌ Hata detayı:', error.response?.data);
+    }
+  };
+
+  const loadJobs = async () => {
     setLoading(true);
     try {
-      const [statsRes, keywordsRes, categoriesRes] = await Promise.all([
-        jobsAPI.getJobStats(),
-        jobsAPI.getPopularKeywords(),
-        jobsAPI.getJobCategories()
-      ]);
+      const searchParams = {
+        page: currentPage,
+        limit: itemsPerPage,
+        sortBy: 'publishDate'
+      };
 
-      if (statsRes.data.success) setStats(statsRes.data.data);
-      if (keywordsRes.data.success) setKeywords(keywordsRes.data.data);
-      if (categoriesRes.data.success) setCategories(categoriesRes.data.data);
+      // Eğer belirli bir grup seçilmişse, o gruptan filtreleme yap
+      if (selectedGroup) {
+        searchParams.keyword = selectedGroup;
+      }
 
-      await loadRecentJobs();
+      console.log('📞 API Çağrısı yapılıyor:', searchParams);
+      const response = await jobsAPI.searchJobs(searchParams);
+      console.log('📬 API Yanıtı:', response.data);
+      
+      if (response.data.success) {
+        setJobs(response.data.data);
+        setPagination(response.data.pagination);
+        console.log('✅ İş ilanları yüklendi:', response.data.data.length, 'adet');
+      } else {
+        setJobs([]);
+        toast.error('İş ilanları yüklenemedi');
+        console.log('❌ API başarısız:', response.data.message);
+      }
     } catch (error) {
-      console.error('Veri yükleme hatası:', error);
-      toast.error('Sayfa verileri yüklenirken hata oluştu');
+      console.error('❌ İş ilanları yükleme hatası:', error);
+      console.error('❌ Hata detayı:', error.response?.data);
+      toast.error('İş ilanları yüklenirken hata oluştu');
+      setJobs([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadRecentJobs = async () => {
-    try {
-      const response = await jobsAPI.getRecentJobs(itemsPerPage);
-      if (response.data.success) {
-        setJobs(response.data.data);
-        setPagination({
-          page: 1,
-          limit: itemsPerPage,
-          total: response.data.total,
-          pages: Math.ceil(response.data.total / itemsPerPage)
-        });
-      }
-    } catch (error) {
-      console.error('Son ilanlar yükleme hatası:', error);
-      toast.error('İş ilanları yüklenirken hata oluştu');
-    }
+  const handlePageChange = (event, page) => {
+    setCurrentPage(page);
   };
 
-  const searchJobs = async () => {
-    setSearchLoading(true);
-    try {
-      const params = {
-        keyword: searchTerm,
-        source: selectedSource,
-        location: selectedLocation,
-        company: selectedCompany,
-        sortBy,
-        page: currentPage,
-        limit: itemsPerPage
-      };
-
-      // Remove empty parameters
-      Object.keys(params).forEach(key => {
-        if (!params[key]) delete params[key];
-      });
-
-      const response = await jobsAPI.searchJobs(params);
-      
-      if (response.data.success) {
-        setJobs(response.data.data);
-        setPagination(response.data.pagination);
-      } else {
-        toast.error('Arama sonucu bulunamadı');
-        setJobs([]);
-      }
-    } catch (error) {
-      console.error('Arama hatası:', error);
-      toast.error('Arama işlemi sırasında hata oluştu');
-      setJobs([]);
-    } finally {
-      setSearchLoading(false);
-    }
-  };
-
-  const handleSearch = (event) => {
-    event.preventDefault();
-    setCurrentPage(1);
-    searchJobs();
-  };
-
-  const handleKeywordClick = (keyword) => {
-    setSearchTerm(keyword);
+  const handleGroupClick = (searchTerm) => {
+    setSelectedGroup(searchTerm);
     setCurrentPage(1);
   };
 
-  const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedSource('');
-    setSelectedLocation('');
-    setSelectedCompany('');
+  const clearGroupFilter = () => {
+    setSelectedGroup(null);
     setCurrentPage(1);
-    loadRecentJobs();
   };
 
   const JobCard = ({ job }) => (
@@ -208,8 +165,6 @@ const JobsPage = () => {
                   size="small"
                   variant="outlined"
                   color="secondary"
-                  onClick={() => handleKeywordClick(keyword)}
-                  sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
                 />
               ))}
               {job.keywords.length > 4 && (
@@ -232,23 +187,15 @@ const JobsPage = () => {
             </Typography>
           </Box>
 
-          <Box display="flex" alignItems="center" gap={1}>
-            {job.views > 0 && (
-              <Box display="flex" alignItems="center" gap={0.5}>
-                <ViewIcon fontSize="small" color="action" />
-                <Typography variant="caption" color="text.secondary">
-                  {job.views}
-                </Typography>
-              </Box>
-            )}
-            
+          <Box display="flex" gap={1}>
             <IconButton
+              size="small"
+              color="primary"
               component={Link}
               href={job.url}
               target="_blank"
               rel="noopener noreferrer"
-              size="small"
-              color="primary"
+              sx={{ '&:hover': { backgroundColor: 'primary.light', color: 'white' } }}
             >
               <LaunchIcon fontSize="small" />
             </IconButton>
@@ -258,215 +205,199 @@ const JobsPage = () => {
     </Card>
   );
 
-  if (loading) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-        <CircularProgress size={60} />
-      </Container>
-    );
-  }
-
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Header */}
       <Box mb={4}>
         <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 700, color: 'primary.main' }}>
-          <WorkIcon sx={{ mr: 2, verticalAlign: 'middle' }} />
+          <WorkIcon sx={{ mr: 2, fontSize: 'inherit' }} />
           İş İlanları
         </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Güncel iş fırsatlarını keşfedin
+        </Typography>
         
-        {/* Stats */}
-        <Grid container spacing={2} mb={3}>
-          <Grid item xs={6} sm={3}>
-            <Card sx={{ textAlign: 'center', p: 2 }}>
-              <Typography variant="h5" color="primary.main" fontWeight="bold">
+        {/* Selected Group Info */}
+        {selectedGroup && (
+          <Box mt={2}>
+            <Chip
+              label={`Seçili Kategori: ${selectedGroup}`}
+              color="primary"
+              variant="filled"
+              onDelete={clearGroupFilter}
+              sx={{ fontSize: '1rem', py: 2 }}
+            />
+          </Box>
+        )}
+      </Box>
+
+      {/* Stats */}
+      <Grid container spacing={3} mb={4}>
+        <Grid item xs={6} sm={3}>
+          <Card>
+            <CardContent sx={{ textAlign: 'center' }}>
+              <Typography variant="h4" color="primary" fontWeight="bold">
                 {stats.totalJobs || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Toplam İlan
               </Typography>
-            </Card>
-          </Grid>
-          <Grid item xs={6} sm={3}>
-            <Card sx={{ textAlign: 'center', p: 2 }}>
-              <Typography variant="h5" color="success.main" fontWeight="bold">
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <Card>
+            <CardContent sx={{ textAlign: 'center' }}>
+              <Typography variant="h4" color="secondary" fontWeight="bold">
                 {stats.todayJobs || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Bugün
+                Bugünkü Yeni İlanlar
               </Typography>
-            </Card>
-          </Grid>
-          <Grid item xs={6} sm={3}>
-            <Card sx={{ textAlign: 'center', p: 2 }}>
-              <Typography variant="h5" color="info.main" fontWeight="bold">
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <Card>
+            <CardContent sx={{ textAlign: 'center' }}>
+              <Typography variant="h4" color="success.main" fontWeight="bold">
                 {stats.totalCompanies || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Şirket
               </Typography>
-            </Card>
-          </Grid>
-          <Grid item xs={6} sm={3}>
-            <Card sx={{ textAlign: 'center', p: 2 }}>
-              <Typography variant="h5" color="warning.main" fontWeight="bold">
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <Card>
+            <CardContent sx={{ textAlign: 'center' }}>
+              <Typography variant="h4" color="info.main" fontWeight="bold">
                 {stats.totalSources || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Kaynak
               </Typography>
-            </Card>
-          </Grid>
+            </CardContent>
+          </Card>
         </Grid>
-      </Box>
+      </Grid>
 
-      {/* Search and Filters */}
-      <Card sx={{ p: 3, mb: 3 }}>
-        <form onSubmit={handleSearch}>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                label="Anahtar Kelime"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                InputProps={{
-                  startAdornment: <SearchIcon color="action" sx={{ mr: 1 }} />
-                }}
-              />
-            </Grid>
-            
-            <Grid item xs={12} sm={6} md={2}>
-              <FormControl fullWidth>
-                <InputLabel>Kaynak</InputLabel>
-                <Select
-                  value={selectedSource}
-                  label="Kaynak"
-                  onChange={(e) => setSelectedSource(e.target.value)}
-                >
-                  <MenuItem value="">Tümü</MenuItem>
-                  {categories.sources.map((source) => (
-                    <MenuItem key={source.source} value={source.source}>
-                      {source.source} ({source.count})
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={2}>
-              <Autocomplete
-                options={categories.locations.map(loc => loc.location)}
-                value={selectedLocation}
-                onChange={(e, newValue) => setSelectedLocation(newValue || '')}
-                renderInput={(params) => (
-                  <TextField {...params} label="Konum" />
-                )}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={2}>
-              <FormControl fullWidth>
-                <InputLabel>Sırala</InputLabel>
-                <Select
-                  value={sortBy}
-                  label="Sırala"
-                  onChange={(e) => setSortBy(e.target.value)}
-                >
-                  <MenuItem value="publishDate">Tarihe Göre</MenuItem>
-                  <MenuItem value="title">Başlığa Göre</MenuItem>
-                  <MenuItem value="company">Şirkete Göre</MenuItem>
-                  <MenuItem value="views">Görüntülenmeye Göre</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12} md={2}>
-              <Stack direction="row" spacing={1}>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  fullWidth
-                  disabled={searchLoading}
-                  startIcon={searchLoading ? <CircularProgress size={16} /> : <SearchIcon />}
-                >
-                  Ara
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={clearFilters}
-                  disabled={searchLoading}
-                >
-                  Temizle
-                </Button>
-              </Stack>
-            </Grid>
-          </Grid>
-        </form>
-      </Card>
-
-      {/* Popular Keywords */}
-      {keywords.trending && keywords.trending.length > 0 && (
-        <Card sx={{ p: 2, mb: 3 }}>
-          <Box display="flex" alignItems="center" mb={2}>
-            <TrendingIcon color="primary" sx={{ mr: 1 }} />
-            <Typography variant="h6" fontWeight="600">
-              Popüler Anahtar Kelimeler
-            </Typography>
-          </Box>
-          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-            {keywords.trending.slice(0, 15).map((item, index) => (
-              <Chip
-                key={index}
-                label={`${item.keyword} (${item.count})`}
-                variant="outlined"
-                color="primary"
-                onClick={() => handleKeywordClick(item.keyword)}
-                sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'primary.50' } }}
-              />
-            ))}
-          </Stack>
-        </Card>
-      )}
-
-      {/* Job Listings */}
-      {jobs.length === 0 && !searchLoading ? (
-        <Alert severity="info" sx={{ mt: 2 }}>
-          <Typography>
-            {searchTerm || selectedSource || selectedLocation || selectedCompany
-              ? 'Arama kriterlerinize uygun iş ilanı bulunamadı.'
-              : 'Henüz hiç iş ilanı yok.'}
+      {/* Scraping Groups */}
+      {scrapingGroups.length > 0 && !loading && (
+        <Card sx={{ mb: 4, p: 3 }}>
+          <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+            İş İlanı Kategorileri
           </Typography>
-        </Alert>
-      ) : (
-        <>
-          <Grid container spacing={3}>
-            {jobs.map((job) => (
-              <Grid item xs={12} sm={6} lg={4} key={job._id}>
-                <JobCard job={job} />
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Eklenen iş ilanı kategorilerine göz atın:
+          </Typography>
+          <Grid container spacing={2}>
+            {scrapingGroups.map((group, index) => (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
+                <Card
+                  sx={{
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    border: selectedGroup === group.searchTerm ? '2px solid' : '1px solid',
+                    borderColor: selectedGroup === group.searchTerm ? 'primary.main' : 'divider',
+                    backgroundColor: selectedGroup === group.searchTerm ? 'primary.50' : 'background.paper',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: 3,
+                      borderColor: 'primary.main'
+                    }
+                  }}
+                  onClick={() => handleGroupClick(group.searchTerm)}
+                >
+                  <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                      {group.title}
+                    </Typography>
+                    <Chip
+                      label={`${group.count} ilan`}
+                      color="primary"
+                      size="small"
+                      variant="outlined"
+                    />
+                    {group.sources && group.sources.length > 0 && (
+                      <Box mt={1}>
+                        <Typography variant="caption" color="text.secondary">
+                          Kaynaklar: {group.sources.join(', ')}
+                        </Typography>
+                      </Box>
+                    )}
+                    {group.lastScraped && (
+                      <Box mt={1}>
+                        <Typography variant="caption" color="text.secondary">
+                          Son güncelleme: {formatDistanceToNow(new Date(group.lastScraped), { addSuffix: true, locale: tr })}
+                        </Typography>
+                      </Box>
+                    )}
+                  </CardContent>
+                </Card>
               </Grid>
             ))}
           </Grid>
-
-          {/* Pagination */}
-          {pagination.pages > 1 && (
-            <Box display="flex" justifyContent="center" mt={4}>
-              <Pagination
-                count={pagination.pages}
-                page={pagination.page}
-                onChange={(e, page) => setCurrentPage(page)}
-                color="primary"
-                size="large"
-              />
-            </Box>
-          )}
-        </>
+        </Card>
       )}
 
-      {searchLoading && (
-        <Box display="flex" justifyContent="center" mt={4}>
+      {/* Loading */}
+      {loading && (
+        <Box display="flex" justifyContent="center" my={4}>
           <CircularProgress />
         </Box>
+      )}
+
+      {/* Jobs Grid */}
+      {!loading && (
+        <>
+                     {jobs.length === 0 ? (
+             <Alert severity="info" sx={{ my: 4 }}>
+               <Typography variant="h6" gutterBottom>
+                 {selectedGroup ? `"${selectedGroup}" Kategorisinde İş İlanı Bulunamadı` : 'Henüz İş İlanı Bulunamadı'}
+               </Typography>
+               <Typography>
+                 {selectedGroup 
+                   ? `Bu kategoride henüz iş ilanı bulunmuyor. Diğer kategorileri deneyebilirsiniz.`
+                   : 'Admin tarafından yeni iş ilanları eklendiğinde burada görüntülenecektir.'
+                 }
+               </Typography>
+               {selectedGroup && (
+                 <Button
+                   variant="outlined"
+                   onClick={clearGroupFilter}
+                   sx={{ mt: 2 }}
+                 >
+                   Tüm İlanları Görüntüle
+                 </Button>
+               )}
+             </Alert>
+          ) : (
+            <>
+              <Grid container spacing={3}>
+                {jobs.map((job) => (
+                  <Grid item xs={12} sm={6} md={4} key={job._id || job.url}>
+                    <JobCard job={job} />
+                  </Grid>
+                ))}
+              </Grid>
+
+              {/* Pagination */}
+              {pagination.pages > 1 && (
+                <Box display="flex" justifyContent="center" mt={4}>
+                  <Pagination
+                    count={pagination.pages}
+                    page={currentPage}
+                    onChange={handlePageChange}
+                    color="primary"
+                    size="large"
+                  />
+                </Box>
+              )}
+            </>
+          )}
+        </>
       )}
     </Container>
   );

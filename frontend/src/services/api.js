@@ -623,17 +623,17 @@ export default api;
 // Enhanced Jobs API
 export const jobsAPI = {
   // Admin scraping functions
-  scrapeJobs: (data) => api.post('/jobs/scrape', data),
-  testKariyer: () => api.get('/jobs/test-kariyer'),
-  testLinkedin: () => api.get('/jobs/test-linkedin'),
-  testFullScrape: () => api.get('/jobs/test-full'),
-  quickScrape: (searchTerm) => api.get(`/jobs/quick-scrape/${searchTerm}`),
-  getScraperInfo: () => api.get('/jobs/scraper-info'),
+  scrapeJobs: (data) => api.post('/api/jobs/scrape', data),
+  testKariyer: () => api.get('/api/jobs/test-kariyer'),
+  testLinkedin: () => api.get('/api/jobs/test-linkedin'),
+  testFullScrape: () => api.get('/api/jobs/test-full'),
+  quickScrape: (searchTerm) => api.get(`/api/jobs/quick-scrape/${searchTerm}`),
+  getScraperInfo: () => api.get('/api/jobs/scraper-info'),
   
   // User-facing job search functions
   searchJobs: (params = {}) => {
     const queryString = new URLSearchParams(params).toString();
-    return api.get(`/jobs/search?${queryString}`);
+    return api.get(`/api/jobs/search?${queryString}`);
   },
   
   getJobsByKeyword: (keyword, options = {}) => {
@@ -645,21 +645,23 @@ export const jobsAPI = {
       ...options
     };
     const queryString = new URLSearchParams(params).toString();
-    return api.get(`/jobs/search?${queryString}`);
+    return api.get(`/api/jobs/search?${queryString}`);
   },
   
-  getPopularKeywords: () => api.get('/jobs/keywords'),
+  getPopularKeywords: () => api.get('/api/jobs/keywords'),
   
-  getJobCategories: () => api.get('/jobs/categories'),
+  getScrapingGroups: () => api.get('/api/jobs/scraping-groups'),
   
-  getRecentJobs: (limit = 20) => api.get(`/jobs/recent?limit=${limit}`),
+  getJobCategories: () => api.get('/api/jobs/categories'),
   
-  getJobStats: () => api.get('/jobs/stats'),
+  getRecentJobs: (limit = 20) => api.get(`/api/jobs/recent?limit=${limit}`),
+  
+  getJobStats: () => api.get('/api/jobs/stats'),
   
   // Advanced search with multiple filters
   advancedSearch: (filters) => {
     const queryString = new URLSearchParams(filters).toString();
-    return api.get(`/jobs/search?${queryString}`);
+    return api.get(`/api/jobs/search?${queryString}`);
   },
   
   // Get jobs by source
@@ -671,7 +673,7 @@ export const jobsAPI = {
       sortBy: options.sortBy || 'publishDate'
     };
     const queryString = new URLSearchParams(params).toString();
-    return api.get(`/jobs/search?${queryString}`);
+    return api.get(`/api/jobs/search?${queryString}`);
   },
   
   // Get jobs by location
@@ -683,7 +685,7 @@ export const jobsAPI = {
       sortBy: options.sortBy || 'publishDate'
     };
     const queryString = new URLSearchParams(params).toString();
-    return api.get(`/jobs/search?${queryString}`);
+    return api.get(`/api/jobs/search?${queryString}`);
   },
   
   // Get jobs by company
@@ -695,6 +697,6 @@ export const jobsAPI = {
       sortBy: options.sortBy || 'publishDate'
     };
     const queryString = new URLSearchParams(params).toString();
-    return api.get(`/jobs/search?${queryString}`);
+    return api.get(`/api/jobs/search?${queryString}`);
   }
 };
