@@ -140,14 +140,18 @@ const JobsPage = () => {
         <Box display="flex" alignItems="center" mb={1} gap={0.5}>
           <BusinessIcon color="action" fontSize="small" />
           <Typography variant="body2" color="text.secondary">
-            {job.company}
+            {job.company && job.company !== 'Şirket Adı (Detayda)' && !job.company.includes('(Detayda)') 
+              ? job.company 
+              : 'Şirket bilgisi mevcut değil'}
           </Typography>
         </Box>
 
         <Box display="flex" alignItems="center" mb={2} gap={0.5}>
           <LocationIcon color="action" fontSize="small" />
           <Typography variant="body2" color="text.secondary">
-            {job.location}
+            {job.location && job.location !== 'Lokasyon (Detayda)' && !job.location.includes('(Detayda)')
+              ? job.location 
+              : 'Konum bilgisi mevcut değil'}
           </Typography>
         </Box>
 

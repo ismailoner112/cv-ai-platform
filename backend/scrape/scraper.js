@@ -286,8 +286,8 @@ const scrapeKariyerNet = async (searchTerm = 'yazılım mühendisi', limit = 10)
           if (href && title.length > 3 && !href.includes('#') && !href.includes('javascript:')) {
             results.push({
               title: title,
-              company: 'Şirket Adı (Detayda)',
-              location: 'Lokasyon (Detayda)',
+              company: 'Şirket Bilgisi Mevcut Değil',
+              location: 'Türkiye',
               url: href.startsWith('http') ? href : `https://www.kariyer.net${href}`,
               description: 'Detay sayfasından alınacak',
               source: 'Kariyer.net',
@@ -373,12 +373,45 @@ const scrapeKariyerNet = async (searchTerm = 'yazılım mühendisi', limit = 10)
           
           // Data validation and cleaning
           if ((title.length > 3 || titleLink.includes('/is-ilani/')) && !title.toLowerCase().includes('reklam')) {
+            
+            // Clean and improve data quality
+            let cleanTitle = title || 'İş İlanı';
+            let cleanCompany = company || 'Şirket Bilgisi Mevcut Değil';
+            let cleanLocation = location || 'Türkiye';
+            let cleanDescription = description || 'Detaylı bilgi için ilana bakınız.';
+            
+            // Remove extra whitespace and clean data
+            cleanTitle = cleanTitle.replace(/\s+/g, ' ').trim();
+            cleanCompany = cleanCompany.replace(/\s+/g, ' ').trim();
+            cleanLocation = cleanLocation.replace(/\s+/g, ' ').trim();
+            cleanDescription = cleanDescription.replace(/\s+/g, ' ').trim();
+            
+            // If company or location are too generic, try to extract from title or description
+            if (cleanCompany === 'Şirket Bilgisi Mevcut Değil' || cleanCompany.length < 3) {
+              // Try to extract company from title or description
+              const titleParts = cleanTitle.split(' - ');
+              if (titleParts.length > 1) {
+                cleanCompany = titleParts[titleParts.length - 1].trim();
+              }
+            }
+            
+            if (cleanLocation === 'Türkiye' || cleanLocation.length < 3) {
+              // Try to extract location from description
+              const cities = ['İstanbul', 'Ankara', 'İzmir', 'Bursa', 'Antalya', 'Adana', 'Konya', 'Gaziantep', 'Mersin', 'Kayseri'];
+              for (const city of cities) {
+                if (cleanDescription.toLowerCase().includes(city.toLowerCase()) || cleanTitle.toLowerCase().includes(city.toLowerCase())) {
+                  cleanLocation = city;
+                  break;
+                }
+              }
+            }
+            
             const jobData = {
-              title: title || 'İş İlanı',
-              company: company || 'Şirket Bilgisi Mevcut Değil',
-              location: location || 'Türkiye', 
+              title: cleanTitle,
+              company: cleanCompany,
+              location: cleanLocation, 
               url: titleLink.startsWith('http') ? titleLink : `https://www.kariyer.net${titleLink}`,
-              description: (description || 'Detaylı bilgi için ilana bakınız.').substring(0, 300),
+              description: cleanDescription.substring(0, 300),
               source: 'Kariyer.net',
               scrapedAt: new Date(),
               searchTerm: searchTerm
@@ -417,7 +450,7 @@ const scrapeKariyerNet = async (searchTerm = 'yazılım mühendisi', limit = 10)
 
 // Gelişmiş LinkedIn scraper
 const scrapeLinkedIn = async (searchTerm = 'software engineer', limit = 10) => {
-  console.log(`🚀 LinkedIn scraping başlatılıyor: "${searchTerm}"`);
+  console.log(`🚀 LinkedIn scraping başlatılıyor: "${searchTerm}" (Limit: ${limit})`);
   const results = [];
   let scrapedCount = 0;
   
@@ -471,8 +504,8 @@ const scrapeLinkedIn = async (searchTerm = 'software engineer', limit = 10) => {
           if (href && title.length > 3) {
             results.push({
               title: title,
-              company: 'LinkedIn - Detay sayfasından alınacak',
-              location: 'Detay sayfasından alınacak',
+              company: 'Şirket Bilgisi Mevcut Değil',
+              location: 'Türkiye',
               url: href.startsWith('http') ? href : `https://www.linkedin.com${href}`,
               description: 'LinkedIn job description', 
               source: 'LinkedIn',
@@ -539,10 +572,10 @@ const scrapeLinkedIn = async (searchTerm = 'software engineer', limit = 10) => {
           if (title.length > 3) {
             const jobData = {
               title: title,
-              company: company || 'LinkedIn Company',
-              location: location || 'Remote/Turkey',
+              company: company || 'Şirket Bilgisi Mevcut Değil',
+              location: location || 'Türkiye',
               url: titleLink.startsWith('http') ? titleLink : `https://www.linkedin.com${titleLink}`,
-              description: `${title} position at ${company}. View full details on LinkedIn.`,
+              description: `${title} position at ${company || 'şirkette'}. View full details on LinkedIn.`,
               source: 'LinkedIn',
               scrapedAt: new Date(),
               searchTerm: searchTerm
@@ -565,6 +598,8 @@ const scrapeLinkedIn = async (searchTerm = 'software engineer', limit = 10) => {
     }
     
     console.log(`🎉 LinkedIn scraping tamamlandı: ${scrapedCount} ilan`);
+    console.log(`📊 LinkedIn sonuçları:`, results.map(r => ({ title: r.title, company: r.company, location: r.location })));
+    
     return { 
       success: true, 
       data: results, 
@@ -620,20 +655,31 @@ const scrapeJobs = async (searchTerm = 'yazılım mühendisi', limit = 10) => {
       
       const linkedinResult = await scrapeLinkedIn(searchTerm, remainingLimit);
       
+      console.log(`🔍 LinkedIn result:`, {
+        success: linkedinResult.success,
+        dataLength: linkedinResult.data ? linkedinResult.data.length : 0,
+        message: linkedinResult.message
+      });
+      
       if (linkedinResult.success && linkedinResult.data) {
+        console.log(`✅ LinkedIn'den ${linkedinResult.data.length} ilan ekleniyor...`);
         results.jobs.push(...linkedinResult.data);
         results.sources['LinkedIn'] = {
           success: true,
           count: linkedinResult.data.length,
           message: linkedinResult.message
         };
+        console.log(`📊 Toplam job sayısı şimdi: ${results.jobs.length}`);
       } else {
+        console.log(`❌ LinkedIn başarısız:`, linkedinResult.message);
         results.sources['LinkedIn'] = {
           success: false,
           count: 0,
           message: linkedinResult.message || 'LinkedIn scraping başarısız'
         };
       }
+    } else {
+      console.log(`⏭️ LinkedIn scraping atlanıyor, yeterli ilan var (${results.jobs.length}/${limit})`);
     }
     
     results.total = results.jobs.length;
@@ -687,6 +733,8 @@ const scrapeJobs = async (searchTerm = 'yazılım mühendisi', limit = 10) => {
         
         for (const job of results.jobs) {
           try {
+            console.log(`💾 Kaydediliyor: ${job.title} - ${job.company} - ${job.source}`);
+            
             // Aynı URL varsa güncelle, yoksa yeni ekle
             const existingJob = await Announcement.findOne({ url: job.url });
             
@@ -708,17 +756,18 @@ const scrapeJobs = async (searchTerm = 'yazılım mühendisi', limit = 10) => {
               await existingJob.save();
               savedResults.push({ status: 'updated', job: existingJob });
               updatedCount++;
-              console.log(`🔄 Güncellendi: ${job.title} - ${job.company}`);
+              console.log(`🔄 Güncellendi: ${job.title} - ${job.company} - ${job.source}`);
             } else {
               // Yeni ilan ekle
               const newJob = new Announcement(job);
               const saved = await newJob.save();
               savedResults.push({ status: 'created', job: saved });
               savedCount++;
-              console.log(`✅ Kaydedildi: ${job.title} - ${job.company}`);
+              console.log(`✅ Kaydedildi: ${job.title} - ${job.company} - ${job.source}`);
             }
           } catch (saveError) {
             console.warn(`⚠️ ${job.title} kaydedilemedi:`, saveError.message);
+            console.warn(`⚠️ Hata detayı:`, saveError);
             savedResults.push({ status: 'error', error: saveError.message, job: job });
             errorCount++;
           }

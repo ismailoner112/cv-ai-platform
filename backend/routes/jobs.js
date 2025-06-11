@@ -39,14 +39,35 @@ router.get('/test', auth, isAdmin, async (req, res) => {
 // Enhanced main scraping endpoint (Admin only)
 router.post('/scrape', auth, isAdmin, async (req, res) => {
   console.log('🚀 Manual scraping başlatıldı');
+  console.log('📥 Request body:', req.body);
   
   try {
-    const { searchTerm = 'yazılım mühendisi', limit = 10 } = req.body;
+    // Frontend'den gelen parametreler: { source, keyword }
+    const { 
+      keyword: frontendKeyword, 
+      searchTerm: backendSearchTerm,
+      source, 
+      limit = 10 
+    } = req.body;
     
-    console.log(`📋 Scraping parametreleri: "${searchTerm}", limit: ${limit}`);
+    // keyword veya searchTerm'i kullan
+    const finalSearchTerm = frontendKeyword || backendSearchTerm || 'yazılım mühendisi';
+    
+    console.log(`📋 Scraping parametreleri:`);
+    console.log(`  🎯 Anahtar Kelime: "${finalSearchTerm}"`);
+    console.log(`  📊 Limit: ${limit}`);
+    console.log(`  🌐 Kaynak: ${source || 'all'}`);
     
     // Ana scraping fonksiyonunu çağır
-    const result = await scrapeJobs(searchTerm, parseInt(limit));
+    console.log('🔄 scrapeJobs fonksiyonu çağrılıyor...');
+    const result = await scrapeJobs(finalSearchTerm, parseInt(limit));
+    
+    console.log('✅ Scraping tamamlandı, sonuç:', {
+      success: result.success,
+      total: result.total,
+      message: result.message,
+      database: result.database
+    });
     
     res.json({
       success: result.success,
@@ -57,7 +78,12 @@ router.post('/scrape', auth, isAdmin, async (req, res) => {
         total: result.total,
         database: result.database,
         keyword: result.keyword,
-        scrapedAt: result.scrapedAt
+        scrapedAt: result.scrapedAt,
+        // Ek bilgiler frontend için
+        scrapedCount: result.database?.total || 0,
+        createdCount: result.database?.saved || 0,
+        updatedCount: result.database?.updated || 0,
+        results: result.jobs // Frontend için uyumluluk
       }
     });
     
@@ -93,12 +119,47 @@ router.get('/test-linkedin', auth, isAdmin, async (req, res) => {
   
   try {
     const result = await testScrapeLinkedIn();
+    console.log('🧪 LinkedIn test sonucu:', result);
     res.json(result);
   } catch (error) {
     console.error('❌ LinkedIn test error:', error);
     res.status(500).json({
       success: false,
       message: 'LinkedIn test başarısız',
+      error: error.message
+    });
+  }
+});
+
+// Özel LinkedIn debug endpoint'i
+router.get('/debug-linkedin/:searchTerm', auth, isAdmin, async (req, res) => {
+  console.log('🔍 LinkedIn debug başlatıldı');
+  
+  try {
+    const { searchTerm } = req.params;
+    const { scrapeLinkedIn } = require('../scrape/scraper');
+    
+    console.log(`🔍 LinkedIn debug: "${searchTerm}" için scraping yapılıyor...`);
+    const result = await scrapeLinkedIn(searchTerm, 5);
+    
+    console.log('🔍 LinkedIn debug sonucu:', {
+      success: result.success,
+      dataCount: result.data ? result.data.length : 0,
+      message: result.message,
+      data: result.data
+    });
+    
+    res.json({
+      success: true,
+      debug: true,
+      searchTerm,
+      result
+    });
+  } catch (error) {
+    console.error('❌ LinkedIn debug error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'LinkedIn debug başarısız',
       error: error.message
     });
   }

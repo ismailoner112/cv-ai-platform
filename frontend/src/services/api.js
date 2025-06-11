@@ -600,8 +600,9 @@ Yanıtını SADECE şu JSON formatında ver:
     // Enhanced Debug Endpoints
     test: () => api.get('/api/jobs/test'),
     testKariyer: () => api.get('/api/jobs/test-kariyer'),
-    testLinkedIn: () => api.get('/api/jobs/test-linkedin'),
-    testFullScrape: () => api.get('/api/jobs/test-full'),
+      testLinkedIn: () => api.get('/api/jobs/test-linkedin'),
+  testFullScrape: () => api.get('/api/jobs/test-full'),
+  debugLinkedIn: (searchTerm) => api.get(`/api/jobs/debug-linkedin/${encodeURIComponent(searchTerm)}`),
     quickScrape: (term) => api.get(`/api/jobs/quick-scrape/${encodeURIComponent(term)}`),
     scraperInfo: () => api.get('/api/jobs/scraper-info'),
     
